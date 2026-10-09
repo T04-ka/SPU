@@ -47,22 +47,13 @@ int calc_dmp(stack_t* stkptr);
 
 int calc_halt(/*stack_t* stkptr, */cmd_t* onbreak);
 
-/*
-struct calc
-{
-    int *(stack_t calc) calc;
-    calc_push;
-
-
-};
-*/
 
 int main(int argc, char** argv) {
 
     stack_t stk = {};
     STACK_CTOR(stk, 4);
 
-    FILE* cmdlistfl = fopen("byte.txt", "r");
+    FILE* cmdlistfl = fopen(argv[1], "r");
 
     calc(&stk, cmdlistfl);
 
@@ -83,15 +74,9 @@ int calc(stack_t* stkptr, FILE* cmdlistfl) {
     printf("Start calculator program.\n");
     while (!onbreak) {
 
-        //char* str = (char*) calloc(5,1);
-        size_t nsymb = 0;
-
-        //mygetline(&str, &nsymb, cmdlistfl);
         cmd = -1;
-        //int var = 0;
 
         fscanf(cmdlistfl, "%d", &cmd);
-        $d(cmd);
 
         switch (cmd) {
 
@@ -149,11 +134,7 @@ int calc(stack_t* stkptr, FILE* cmdlistfl) {
                 break;
             }
         }
-
-        //free(str);
     }
-
-//    free(str);
 
     if (onbreak == cmd_t_NORMAL_EXIT) {
 
@@ -168,7 +149,6 @@ int calc_push(stack_t* stkptr, FILE* cmdlistfl) {
 
     int var = 0;
     fscanf(cmdlistfl, "%d", &var);
-    $d(var);
     STACK_PUSH(stkptr, var);
 
     return 0;
