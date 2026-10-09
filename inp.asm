@@ -1,0 +1,6 @@
+PSH 1
+PSH 1
+ADD
+DMP
+OUT
+HLT
