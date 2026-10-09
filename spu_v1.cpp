@@ -1,10 +1,3 @@
-
-
-#define STK_SANITIZE
-#define STK_SANITIZE_LOUD
-#define STK_HANDLER_ABORT
-#define STK_ELM_T int
-
 #include "./../Stack/stack.h"
 #include "./../Strfuncs/getline.cpp"
 
@@ -179,7 +172,7 @@ int calc_out(stack_t* stkptr) {
 
     int var = 0;
     STACK_POP(stkptr, &var);
-    printf("Out value: %d\n", var);
+    printf("Out value: %lg\n", var / 1000.0);
     return 0;
 }
 
@@ -196,7 +189,7 @@ int calc_mul(stack_t* stkptr) {
     int var1 = 0, var2 = 0;
     STACK_POP(stkptr, &var1);
     STACK_POP(stkptr, &var2);
-    STACK_PUSH(stkptr, var2 * var1);
+    STACK_PUSH(stkptr, var2 * var1 / 1000);
 
     return 0;
 }
@@ -214,7 +207,7 @@ int calc_div(stack_t* stkptr, cmd_t* onbreak) {
     }
     else {
 
-        STACK_PUSH(stkptr, var2 / var1);
+        STACK_PUSH(stkptr, var2 * 1000 / var1);
     }
 
     return 0;

@@ -64,21 +64,19 @@ int main(int argc, char** argv) {
 
                 const char* endptr = fldata.prsdbffr[i].str + 4;
 
-                int var = (int) strtol(fldata.prsdbffr[i].str + 3, (char**) &endptr, 10);
+                double var = strtod(fldata.prsdbffr[i].str + 3, (char**) &endptr);
 
                 if (endptr != fldata.prsdbffr[i].str + fldata.prsdbffr[i].len - 1) {
-
 
                     errlog(ioflnms.inp, i, fldata.prsdbffr[i].str, "Wrong PUSH parametr given");
                     break;
                 }
 
-                fprintf(outfl, "1 %d ", var);
+                fprintf(outfl, "1 %d ", (int) (1000 * var));
             }
             else {
 
                 errlog(ioflnms.inp, i, fldata.prsdbffr[i].str, "Wrong command given");
-
                 break;
             }
 
