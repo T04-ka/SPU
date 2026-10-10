@@ -3,6 +3,7 @@
 
 #include "./../../myformat.cpp"
 
+#define SPU_EXPANENT_COEFF 1000
 
 enum cmd_n {
     cmd_n_PSH = 1,
@@ -18,8 +19,9 @@ const int CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT = 7;
 
 struct cmd_t
 {
-    str_t     name;
-    cmd_n     n;
+    str_t   name;
+    cmd_n   num;
+    int     arg;
 };
 
 

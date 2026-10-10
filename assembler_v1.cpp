@@ -3,34 +3,16 @@
 #include "./../Onegin/strfuncs.h"
 #include "./../Onegin/io.h"
 
+#include "enum.h"
+
 #include <stdio.h>
 #include <string.h>
 
 
-str_t const cmd_PSH = "PSH";
-str_t const cmd_ADD = "ADD";
-str_t const cmd_SUB = "SUB";
-str_t const cmd_DIV = "DIV";
-str_t const cmd_OUT = "OUT";
-str_t const cmd_HLT = "HLT";
-str_t const cmd_DMP = "DMP";
-str_t const cmd_MUL = "MUL";
-
-#define CALC_EXPANENT_COEFF 1000
-
-enum cmd_n {
-    cmd_n_PSH = 1,
-    cmd_n_ADD = 2,
-    cmd_n_SUB = 3,
-    cmd_n_DIV = 4,
-    cmd_n_MUL = 5,
-    cmd_n_OUT = 6,
-    cmd_n_DMP = 7,
-    cmd_n_HLT = 0
-};
-
-
 void errlog(str_t flnm, int nln, str_t str, str_t err_msg);
+
+bool is_onlyspace(string str);
+
 
 
 #undef CHECK_WRITE_CMD
@@ -52,6 +34,31 @@ int main(int argc, char** argv) {
 
     rdfrmfl(&fldata);
 
+    for (int i = 0; i < fldata.nlns; i++) {
+
+        if (is_onlyspace(fldata.prsdbffr[i])) continue;
+//
+//         char* cmdstr = {};
+//         int cmdstrlen = 0;
+//         char* argstr = {};
+//         int argstrlen = 0;
+
+        string cmdstr = {};
+        string argstr = {};
+
+        sscanf(fldata.prsdbffr[i].str, "%s%n%s%n", (char*) cmdstr.str, (int*) &cmdstr.len, (char*) argstr.str, () &argstr.len);
+
+        for (int i = 0; i < CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT; i++) {
+
+            if (!strcmp(cmdstr.str, cmd_l[i].name)) {
+
+                if (is_onlyspace(argstr)) {
+
+
+                }
+            }
+        }
+    }
 
     for (int i = 0; i < fldata.nlns; i++) {
 
@@ -63,7 +70,6 @@ int main(int argc, char** argv) {
 
             if (!strcmp(cmd_PSH, cmd)) {
 
-
                 const char* endptr = fldata.prsdbffr[i].str + 4;
 
                 double var = strtod(fldata.prsdbffr[i].str + 3, (char**) &endptr);
@@ -74,7 +80,7 @@ int main(int argc, char** argv) {
                     break;
                 }
 
-                fprintf(outfl, "1 %d ", (int) (1000 * var));
+                fprintf(outfl, "1 %d ", (int) (SPU_EXPANENT_COEFF * var));
             }
             else {
 
@@ -84,6 +90,8 @@ int main(int argc, char** argv) {
 
             continue;
         }
+
+
 
         CHECK_WRITE_CMD(ADD);
 
@@ -120,10 +128,22 @@ int main(int argc, char** argv) {
 #undef CHECK_WRITE_CMD
 
 
-
-
 void errlog(str_t flnm, int nln, str_t str, str_t err_msg) {
 
     fprintf(stderr, FAT"%s:%d: " RED"Syntax error: " DEF"%s.\n", flnm, nln, err_msg);
     fprintf(stderr, "%5d | %s\n%5s |\n", nln, str, "");
+}
+
+
+bool is_onlyspace(string str) {
+
+    int nread = 0;
+    int useless = 0;
+
+    if (!sscanf(str.str, "%d%n", &useless, &nread) && nread == str.len) {
+
+        return true;
+    }
+
+    return false;
 }
