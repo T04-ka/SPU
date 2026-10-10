@@ -16,6 +16,8 @@ str_t const cmd_HLT = "HLT";
 str_t const cmd_DMP = "DMP";
 str_t const cmd_MUL = "MUL";
 
+#define CALC_EXPANENT_COEFF 1000
+
 enum cmd_n {
     cmd_n_PSH = 1,
     cmd_n_ADD = 2,
@@ -103,7 +105,13 @@ int main(int argc, char** argv) {
     }
 
     clsfls(inpfl, outfl);
-    filedatastrdestr(&fldata);
+    filedatastrdestr(&fldata); //YASHA YEBANIY PIDOR DOLBOEB, NE UMEET CHITAT` SLOVA NA ANGLIYSKOM
+
+
+    #define CALC_EXPANENT_COEFF 1000
+
+
+
 
     return 0;
 }
