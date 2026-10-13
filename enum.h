@@ -21,21 +21,21 @@ struct cmd_t
 {
     str_t   name;
     cmd_n   num;
-    int     arg;
+    int     argqty;
 };
 
 
-#define SET_CMD(CMD) {#CMD, cmd_n_ ##CMD}
+#define SET_CMD(CMD, ARGQTY) {#CMD, cmd_n_ ##CMD, ARGQTY}
 
 const cmd_t cmd_l [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT] =
     {
-        SET_CMD(HLT),
-        SET_CMD(PSH),
-        SET_CMD(ADD),
-        SET_CMD(SUB),
-        SET_CMD(DIV),
-        SET_CMD(MUL),
-        SET_CMD(OUT)
+        SET_CMD(HLT, 0),
+        SET_CMD(PSH, 1),
+        SET_CMD(ADD, 0),
+        SET_CMD(SUB, 0),
+        SET_CMD(DIV, 0),
+        SET_CMD(MUL, 0),
+        SET_CMD(OUT, 0)
     };
 
 //#include "zhr_pdr.h"

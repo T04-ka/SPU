@@ -5,9 +5,13 @@
 
 #include "enum.h"
 
+
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+
+#define CALC_EXPANENT_COEFF 1000
+
 
 void errlog(str_t flnm, int nln, str_t str, str_t err_msg);
 
@@ -15,17 +19,14 @@ bool is_onlyspace(string str);
 
 /// Skips no more then n first spaces, or until '\0' is found
 /// If all n symbols are spaces, return 0, else return 1 and put in "str_ptr" the pointer on first non-space symbol.
-int skipn_spaces(const char* str, char* str_ptr, int n);
+int skipn_spaces(const char* str, char** str_ptr, int n);
 
+int parse_asm(filedata fldata, int nln, string* cmd_str, string* arg_str);
 
+int cmd_def(string cmd_str);
 
-#undef CHECK_WRITE_CMD
-#define CHECK_WRITE_CMD(CMD)                            \
-    if (!strcmp(cmd_##CMD, fldata.prsdbffr[i].str)) {   \
-                                                        \
-        fprintf(outfl, "%d ", (int) cmd_n_##CMD);       \
-        continue;                                       \
-    }
+#define BREAK_CILC  free((void*) cmd_str.str); free((void*) arg_str.str); break;
+
 
 int main(int argc, char** argv) {
 
@@ -38,143 +39,72 @@ int main(int argc, char** argv) {
 
     rdfrmfl(&fldata);
 
-    for (int i = 0; i < fldata.nlns; i++) {
+    for (int nln = 0; nln < fldata.nlns; nln++) {
 
+        if (is_onlyspace(fldata.prsdbffr[nln])) continue;
 
-        int now_str_len = fldata.prsdbffr[i].len;
-        char* now_str_ptr = (char*) fldata.prsdbffr[i].str;
+        string cmd_str = {}, arg_str = {};
 
-        if (!skipn_spaces(fldata.prsdbffr[i].str, now_str_ptr, now_str_len)) continue;
+        parse_asm(fldata, nln, &cmd_str, &arg_str);
 
-        now_str_len = now_str_len - (now_str_ptr - fldata.prsdbffr[i].str);
+        $s(cmd_str.str);
+        $s(arg_str.str);
 
-        /// comment find
-        const char* cmmnt_ptr = strchr(now_str_ptr, ';');
-        if (cmmnt_ptr != NULL) {
+        int cmd_n_rd = cmd_def(cmd_str);
 
-            now_str_len = cmmnt_ptr - now_str_ptr + 1;
+        if (cmd_n_rd == -1) {
+
+            errlog(ioflnms.inp, nln, fldata.prsdbffr[nln].str, "Wrong command given");
+            BREAK_CILC;
         }
 
-        char* now_str = strndup(now_str_ptr, now_str_len);
-        now_str[now_str_len - 1] = '\0';
+        int nread = 0;
+        double arg_rd = NAN;
 
-        now_str_ptr = strchr(now_str, ' ');
+        sscanf(arg_str.str, "%lg%n", &arg_rd, &nread);
 
-        int cmd_str_len = 0;
-        int arg_str_len = 0;
+        if (nread == 0 && arg_str.len > 1) {
 
-        char* arg_str_str = now_str;
+            errlog(ioflnms.inp, nln, fldata.prsdbffr[nln].str, "Wrong parametr given");
 
-        if (now_str_ptr != NULL) {
+        }
 
-            cmd_str_len = now_str_ptr - now_str + 1;
-            *now_str_ptr = '\0';
+        if (is_onlyspace({.str = arg_str.str + nread, .len = arg_str.len - nread})) {
 
-            arg_str_len = now_str_len - cmd_str_len;
-            arg_str_str = now_str_ptr + 1;
+            errlog(ioflnms.inp, nln, fldata.prsdbffr[nln].str, "Wrong command given");
+            BREAK_CILC;
+        }
 
-            if (!skipn_spaces(arg_str_str, now_str_ptr, arg_str_len)) {
+        if  (cmd_l[cmd_n_rd].argqty) {
 
-                arg_str_len = arg_str_len - (now_str_ptr - arg_str_str);
-                arg_str_str = now_str_ptr;
-            }
-            else {
+            if (isnan(arg_rd)) {
 
-                arg_str_str = now_str + now_str_len - 1;
-                arg_str_len = 0;
+                errlog(ioflnms.inp, nln, fldata.prsdbffr[nln].str, "Miss an argument");
+                BREAK_CILC;
             }
 
-
+            fprintf(outfl, "%d %d ", cmd_n_rd, (int) arg_rd * SPU_EXPANENT_COEFF);
         }
         else {
 
-            cmd_str_len = now_str_len;
-            arg_str_str = now_str + now_str_len - 1;
-            arg_str_len = 0;
-        }
+            if (!isnan(arg_rd)) {
 
-
-        string cmd_str = {.str = now_str, .len = (size_t) cmd_str_len};
-        string arg_str = {.str = arg_str_str, .len = (size_t) arg_str_len};
-
-        for (int i = 0; i < CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT; i++) {
-
-            if (!strncmp(now_str, cmd_l[i].name, cmd_str_len)) {
-
-            }
-        }
-
-        free(now_str);
-    }
-
-
-
-    for (int i = 0; i < fldata.nlns; i++) {
-
-        if (fldata.prsdbffr[i].len > 4) {
-
-            char cmd[4] = {};
-            strncpy(cmd, fldata.prsdbffr[i].str, 3);
-            cmd[3] = '\0';
-
-            if (!strcmp(cmd_PSH, cmd)) {
-
-                const char* endptr = fldata.prsdbffr[i].str + 4;
-
-                double var = strtod(fldata.prsdbffr[i].str + 3, (char**) &endptr);
-
-                if (endptr != fldata.prsdbffr[i].str + fldata.prsdbffr[i].len - 1) {
-
-                    errlog(ioflnms.inp, i, fldata.prsdbffr[i].str, "Wrong PUSH parametr given");
-                    break;
-                }
-
-                fprintf(outfl, "1 %d ", (int) (SPU_EXPANENT_COEFF * var));
-            }
-            else {
-
-                errlog(ioflnms.inp, i, fldata.prsdbffr[i].str, "Wrong command given");
-                break;
+                errlog(ioflnms.inp, nln, fldata.prsdbffr[nln].str, "An extra argument given");
+                BREAK_CILC;
             }
 
-            continue;
+            fprintf(outfl, "%d ", cmd_n_rd);
         }
 
-
-
-        CHECK_WRITE_CMD(ADD);
-
-        CHECK_WRITE_CMD(SUB);
-
-        CHECK_WRITE_CMD(DIV);
-
-        CHECK_WRITE_CMD(MUL);
-
-        CHECK_WRITE_CMD(OUT);
-
-        CHECK_WRITE_CMD(DMP);
-
-        CHECK_WRITE_CMD(HLT);
-
-        errlog(ioflnms.inp, i, fldata.prsdbffr[i].str, "Wrong command given");
-
-        return 1;
+        free((void*) cmd_str.str);
+        free((void*) arg_str.str);
     }
 
     clsfls(inpfl, outfl);
     filedatastrdestr(&fldata); //YASHA YEBANIY PIDOR DOLBOEB, NE UMEET CHITAT` SLOVA NA ANGLIYSKOM
 
-
-    #define CALC_EXPANENT_COEFF 1000
-
-
-
-
     return 0;
 }
-
-#undef ERRLOG
-#undef CHECK_WRITE_CMD
 
 
 void errlog(str_t flnm, int nln, str_t str, str_t err_msg) {
@@ -195,4 +125,123 @@ bool is_onlyspace(string str) {
     }
 
     return false;
+}
+
+
+/// Skips no more then n first spaces, or until '\0' is found
+/// If all symbols are spaces, return 0, else return 1 and put in "str_ptr" the pointer on first non-space symbol.
+int skipn_spaces(const char* str, char** str_ptr, int n) {
+
+    //$std("-----------------------\n");
+    //$s(str);
+    int i = 0;
+    for (i = 0; i < n && str[i] == ' ' && str[i] != '\0'; i++) {}
+
+    //$d(i);
+
+    if (i < n && str[i] != '\0') {
+
+        if (str_ptr != NULL) {
+
+            *str_ptr = (char*) str + i;
+
+            //$s((str_t) *str_ptr);
+        }
+        //$std("1-----------------------\n");
+        return 1;
+    }
+    //$std("-----------------------\n");
+
+    return 0;
+}
+
+
+int parse_asm(filedata fldata, int nln, string* cmd_str, string* arg_str) {
+
+    int now_str_len = fldata.prsdbffr[nln].len;
+    char* now_str_ptr = (char*) fldata.prsdbffr[nln].str;
+
+    skipn_spaces(fldata.prsdbffr[nln].str, &now_str_ptr, now_str_len);
+
+    now_str_len = now_str_len - (now_str_ptr - fldata.prsdbffr[nln].str);
+
+    /// comment find
+    const char* cmmnt_ptr = strchr(now_str_ptr, ';');
+    if (cmmnt_ptr != NULL) {
+
+        now_str_len = cmmnt_ptr - now_str_ptr + 1;
+    }
+
+    char* now_str = strndup(now_str_ptr, now_str_len);
+
+    //$s(now_str);
+
+    now_str[now_str_len - 1] = '\0';
+
+    now_str_ptr = strchr(now_str, ' ');
+    //$s(now_str_ptr);
+    int cmd_str_len = 0;
+    int arg_str_len = 0;
+
+    char* arg_str_str = now_str;
+
+    if (now_str_ptr != NULL) {
+
+        //$;
+        cmd_str_len = now_str_ptr - now_str + 1;
+        *now_str_ptr = '\0';
+
+        //$s(now_str);
+
+        arg_str_len = now_str_len - cmd_str_len;
+        arg_str_str = now_str_ptr + 1;
+
+        //$s(arg_str_str);
+        //$std("Before skip spaces in arg\n");
+        if (skipn_spaces(arg_str_str, &now_str_ptr, arg_str_len)) {
+
+            //$;
+            arg_str_len = arg_str_len - (now_str_ptr - arg_str_str);
+            arg_str_str = now_str_ptr;
+        }
+        else {
+
+            arg_str_str = now_str + now_str_len - 1;
+            arg_str_len = 0;
+        }
+
+        //$s(arg_str_str);
+
+
+    }
+    else {
+
+        cmd_str_len = now_str_len;
+        arg_str_str = now_str + now_str_len - 1;
+        arg_str_len = 0;
+    }
+
+
+    *cmd_str = {.str = now_str, .len = (size_t) cmd_str_len};
+    *arg_str = {.str = arg_str_str, .len = (size_t) arg_str_len};
+
+    cmd_str->str = strndup(now_str, cmd_str_len);
+    arg_str->str = strndup(arg_str_str, cmd_str_len);
+
+    free(now_str);
+    return 0;
+}
+
+
+int cmd_def(string cmd_str) {
+
+    int cmd_n_rd = 0;
+    for (cmd_n_rd = 0; strncmp(cmd_str.str, cmd_l[cmd_n_rd].name, cmd_str.len) && cmd_n_rd < CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT; cmd_n_rd++) {}
+
+    if (cmd_n_rd == CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT) {
+
+        return -1;
+    }
+
+    return cmd_n_rd;
 }
