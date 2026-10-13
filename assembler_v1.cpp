@@ -7,11 +7,15 @@
 
 #include <stdio.h>
 #include <string.h>
-
+#include <math.h>
 
 void errlog(str_t flnm, int nln, str_t str, str_t err_msg);
 
 bool is_onlyspace(string str);
+
+/// Skips no more then n first spaces, or until '\0' is found
+/// If all n symbols are spaces, return 0, else return 1 and put in "str_ptr" the pointer on first non-space symbol.
+int skipn_spaces(const char* str, char* str_ptr, int n);
 
 
 
@@ -36,29 +40,74 @@ int main(int argc, char** argv) {
 
     for (int i = 0; i < fldata.nlns; i++) {
 
-        if (is_onlyspace(fldata.prsdbffr[i])) continue;
-//
-//         char* cmdstr = {};
-//         int cmdstrlen = 0;
-//         char* argstr = {};
-//         int argstrlen = 0;
 
-        string cmdstr = {};
-        string argstr = {};
+        int now_str_len = fldata.prsdbffr[i].len;
+        char* now_str_ptr = (char*) fldata.prsdbffr[i].str;
 
-        sscanf(fldata.prsdbffr[i].str, "%s%n%s%n", (char*) cmdstr.str, (int*) &cmdstr.len, (char*) argstr.str, () &argstr.len);
+        if (!skipn_spaces(fldata.prsdbffr[i].str, now_str_ptr, now_str_len)) continue;
+
+        now_str_len = now_str_len - (now_str_ptr - fldata.prsdbffr[i].str);
+
+        /// comment find
+        const char* cmmnt_ptr = strchr(now_str_ptr, ';');
+        if (cmmnt_ptr != NULL) {
+
+            now_str_len = cmmnt_ptr - now_str_ptr + 1;
+        }
+
+        char* now_str = strndup(now_str_ptr, now_str_len);
+        now_str[now_str_len - 1] = '\0';
+
+        now_str_ptr = strchr(now_str, ' ');
+
+        int cmd_str_len = 0;
+        int arg_str_len = 0;
+
+        char* arg_str_str = now_str;
+
+        if (now_str_ptr != NULL) {
+
+            cmd_str_len = now_str_ptr - now_str + 1;
+            *now_str_ptr = '\0';
+
+            arg_str_len = now_str_len - cmd_str_len;
+            arg_str_str = now_str_ptr + 1;
+
+            if (!skipn_spaces(arg_str_str, now_str_ptr, arg_str_len)) {
+
+                arg_str_len = arg_str_len - (now_str_ptr - arg_str_str);
+                arg_str_str = now_str_ptr;
+            }
+            else {
+
+                arg_str_str = now_str + now_str_len - 1;
+                arg_str_len = 0;
+            }
+
+
+        }
+        else {
+
+            cmd_str_len = now_str_len;
+            arg_str_str = now_str + now_str_len - 1;
+            arg_str_len = 0;
+        }
+
+
+        string cmd_str = {.str = now_str, .len = (size_t) cmd_str_len};
+        string arg_str = {.str = arg_str_str, .len = (size_t) arg_str_len};
 
         for (int i = 0; i < CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT; i++) {
 
-            if (!strcmp(cmdstr.str, cmd_l[i].name)) {
+            if (!strncmp(now_str, cmd_l[i].name, cmd_str_len)) {
 
-                if (is_onlyspace(argstr)) {
-
-
-                }
             }
         }
+
+        free(now_str);
     }
+
+
 
     for (int i = 0; i < fldata.nlns; i++) {
 
