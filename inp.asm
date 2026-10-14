@@ -1,8 +1,4 @@
-  PPSH   121212
-    PSH     13.1    
-
-ADD ; YASHA PIDORAS
-PSH 25
-MUL
-OUT
+PSH 12,1
+PSH 133
+PSH   0  
 HLT

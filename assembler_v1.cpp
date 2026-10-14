@@ -23,13 +23,11 @@ int skipn_spaces(const char* str, char** str_ptr, int n);
 
 void comlipe_lines(filedata fldata, io_data ioflnms, FILE* outfl);
 
-int parse_asm(filedata fldata, int nln, string* cmd_str, string* arg_str);
-
 int cmd_def(string cmd_str);
 
 int arg_def(string arg_str, double* arg_rd);
 
-#define BREAK_CILC  free((void*) cmd_str.str); free((void*) arg_str.str); break;
+#define BREAK_CILC  free(cmd_str.str); free(arg_str.str); break;
 
 
 int main(int argc, char** argv) {
@@ -112,13 +110,8 @@ void comlipe_lines(filedata fldata, io_data ioflnms, FILE* outfl) {
             continue;
         }
 
-
-
         char* cmd_str_ptr = {};
         char* arg_str_ptr = {};
-        // $p(cmd_str_str);
-        int  cmd_str_len = 0;
-        int  arg_str_len = 0;
 
         string cmd_str = {}, arg_str = {};
 
@@ -127,23 +120,11 @@ void comlipe_lines(filedata fldata, io_data ioflnms, FILE* outfl) {
         sscanf(fldata.prsdbffr[nln].str, "%ms%n", &cmd_str.str, &cmd_str.len);
         sscanf(fldata.prsdbffr[nln].str + cmd_str.len, "%ms%n", &arg_str.str, &arg_str.len);
 
-
         skipn_spaces(fldata.prsdbffr[nln].str, &cmd_str_ptr , cmd_str.len);
         skipn_spaces(fldata.prsdbffr[nln].str + cmd_str.len, &arg_str_ptr , arg_str.len);
 
-        $s(cmd_str_ptr);
-        $d(cmd_str.len);
-        $s(arg_str_ptr);
-        $d(arg_str.len);
-
-        $std("=======================================\n");
-        //arg_str_str = fldata.prsdbffr[nln + cmd_str_len;
-
-
-        arg_str.len = arg_str.len - (arg_str_ptr - fldata.prsdbffr[nln].str - cmd_str.len);
-        cmd_str.len -= (cmd_str_ptr - fldata.prsdbffr[nln].str);
-
-
+        arg_str.len -= (arg_str_ptr - fldata.prsdbffr[nln].str - cmd_str.len - 1);
+        cmd_str.len -= (cmd_str_ptr - fldata.prsdbffr[nln].str - 1);
 
         $s(cmd_str.str);
         $d(cmd_str.len);
@@ -151,11 +132,9 @@ void comlipe_lines(filedata fldata, io_data ioflnms, FILE* outfl) {
         $d(arg_str.len);
 
         //IF NO ARG - NULL
-
-        free(cmd_str.str);
-        free(arg_str.str);
-
         int cmd_n_rd = cmd_def(cmd_str);
+
+        $d(cmd_n_rd);
 
         if (cmd_n_rd == -1) {
 
@@ -192,27 +171,19 @@ void comlipe_lines(filedata fldata, io_data ioflnms, FILE* outfl) {
             fprintf(outfl, "%d ", cmd_n_rd);
         }
 
-        free((void*) cmd_str.str);
-        free((void*) arg_str.str);
+        free(cmd_str.str);
+        free(arg_str.str);
     }
 
 
 }
 
-
-
-int parse_asm(filedata fldata, int nln, string* cmd_str, string* arg_str) {
-
-
-
-    return 0;
-}
-
-
+/// return cmd enum if cmd is correct and -1 if not.
 int cmd_def(string cmd_str) {
+
     char* cmd_str_ptr = cmd_str.str;
     skipn_spaces(cmd_str.str, &cmd_str.str, cmd_str.len);
-    $s(cmd_str.str);
+
     int cmd_n_rd = 0;
     for (cmd_n_rd = 0; cmd_n_rd < CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT && strncmp(cmd_str.str, cmd_l[cmd_n_rd].name, (size_t) cmd_str.len); cmd_n_rd++) {}
 
@@ -223,18 +194,23 @@ int cmd_def(string cmd_str) {
 
     return cmd_l[cmd_n_rd].num;
 }
-
-
+// nan + ret0 - emoty arg_str, nan + ret1 - wrong arg_str, dbl + ret0 - correct convert
+/// return 0 if arg_str was empty and set arg_rd if double converted correctly, return 1 if was no convert (wrong arg_str)
 int arg_def(string arg_str, double* arg_rd) {
 
     int nread = 0;
     // double arg_rd = NAN;
 
+    if (arg_str.str == NULL) {
+
+        return 0;
+    }
+
     sscanf(arg_str.str, "%lg%n", arg_rd, &nread);
-    $d(nread);
-    $s(arg_str.str + nread);
-    $d(is_onlyspace({.str = arg_str.str + nread, .len = arg_str.len - nread}));
-    if ((nread == 0 && arg_str.len > 1) || !is_onlyspace({.str = arg_str.str + nread, .len = arg_str.len - nread})) {
+    //$d(nread);
+    //$s(arg_str.str + nread);
+    //$d(is_onlyspace({.str = arg_str.str + nread, .len = arg_str.len - nread}));
+    if (nread == 0) {
 
         return 1;
     }
