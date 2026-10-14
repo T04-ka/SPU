@@ -5,7 +5,7 @@
 
 #include "enum.h"
 
-
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -61,15 +61,15 @@ void errlog(str_t flnm, int nln, str_t str, str_t err_msg) {
 
 bool is_onlyspace(string str) {
 
-    int nread = 0;
-    int useless = 0;
+    for (int i = 0; i < str.len - 1; i++) {
 
-    if (!sscanf(str.str, "%d%n", &useless, &nread) && nread == str.len) {
+        if (!isspace(str.str[i])) {
 
-        return true;
+            return false;
+        }
     }
 
-    return false;
+    return true;
 }
 
 
@@ -88,7 +88,7 @@ int skipn_spaces(const char* str, char** str_ptr, int n) {
 
         if (str_ptr != NULL) {
 
-            *str_ptr = (char*) str + i;
+            *str_ptr = (char*) (str + i);
 
             //$s((str_t) *str_ptr);
         }
@@ -105,19 +105,55 @@ void comlipe_lines(filedata fldata, io_data ioflnms, FILE* outfl) {
 
     for (int nln = 0; nln < fldata.nlns; nln++) {
 
-        $s(fldata.prsdbffr[nln].str);
+        //$s(fldata.prsdbffr[nln].str);
         if (is_onlyspace(fldata.prsdbffr[nln])) {
 
-            $;
+            //$;
             continue;
         }
 
+
+
+        char* cmd_str_ptr = {};
+        char* arg_str_ptr = {};
+        // $p(cmd_str_str);
+        int  cmd_str_len = 0;
+        int  arg_str_len = 0;
+
         string cmd_str = {}, arg_str = {};
 
-        parse_asm(fldata, nln, &cmd_str, &arg_str);
+        $s(fldata.prsdbffr[nln].str);
+
+        sscanf(fldata.prsdbffr[nln].str, "%ms%n", &cmd_str.str, &cmd_str.len);
+        sscanf(fldata.prsdbffr[nln].str + cmd_str.len, "%ms%n", &arg_str.str, &arg_str.len);
+
+
+        skipn_spaces(fldata.prsdbffr[nln].str, &cmd_str_ptr , cmd_str.len);
+        skipn_spaces(fldata.prsdbffr[nln].str + cmd_str.len, &arg_str_ptr , arg_str.len);
+
+        $s(cmd_str_ptr);
+        $d(cmd_str.len);
+        $s(arg_str_ptr);
+        $d(arg_str.len);
+
+        $std("=======================================\n");
+        //arg_str_str = fldata.prsdbffr[nln + cmd_str_len;
+
+
+        arg_str.len = arg_str.len - (arg_str_ptr - fldata.prsdbffr[nln].str - cmd_str.len);
+        cmd_str.len -= (cmd_str_ptr - fldata.prsdbffr[nln].str);
+
+
 
         $s(cmd_str.str);
+        $d(cmd_str.len);
         $s(arg_str.str);
+        $d(arg_str.len);
+
+        //IF NO ARG - NULL
+
+        free(cmd_str.str);
+        free(arg_str.str);
 
         int cmd_n_rd = cmd_def(cmd_str);
 
@@ -164,87 +200,21 @@ void comlipe_lines(filedata fldata, io_data ioflnms, FILE* outfl) {
 }
 
 
+
 int parse_asm(filedata fldata, int nln, string* cmd_str, string* arg_str) {
 
-    int now_str_len = fldata.prsdbffr[nln].len;
-    char* now_str_ptr = (char*) fldata.prsdbffr[nln].str;
-
-    skipn_spaces(fldata.prsdbffr[nln].str, &now_str_ptr, now_str_len);
-
-    now_str_len = now_str_len - (now_str_ptr - fldata.prsdbffr[nln].str);
-
-    /// comment find
-    const char* cmmnt_ptr = strchr(now_str_ptr, ';');
-    if (cmmnt_ptr != NULL) {
-
-        now_str_len = cmmnt_ptr - now_str_ptr + 1;
-    }
-
-    char* now_str = strndup(now_str_ptr, now_str_len); // NOTE: полная залупа, нахуй убрать
-
-    //$s(now_str);
-
-    now_str[now_str_len - 1] = '\0';
-
-    now_str_ptr = strchr(now_str, ' ');
-    //$s(now_str_ptr);
-    int cmd_str_len = 0;
-    int arg_str_len = 0;
-
-    char* arg_str_str = now_str;
-
-    if (now_str_ptr != NULL) {
-
-        //$;
-        cmd_str_len = now_str_ptr - now_str + 1;
-        *now_str_ptr = '\0';
-
-        //$s(now_str);
-
-        arg_str_len = now_str_len - cmd_str_len;
-        arg_str_str = now_str_ptr + 1;
-
-        //$s(arg_str_str);
-        //$std("Before skip spaces in arg\n");
-        if (skipn_spaces(arg_str_str, &now_str_ptr, arg_str_len)) {
-
-            //$;
-            arg_str_len = arg_str_len - (now_str_ptr - arg_str_str);
-            arg_str_str = now_str_ptr;
-        }
-        else {
-
-            arg_str_str = now_str + now_str_len - 1;
-            arg_str_len = 0;
-        }
-
-        //$s(arg_str_str);
 
 
-    }
-    else {
-
-        cmd_str_len = now_str_len;
-        arg_str_str = now_str + now_str_len - 1;
-        arg_str_len = 0;
-    }
-
-
-    *cmd_str = {.str = now_str, .len = (size_t) cmd_str_len};
-    *arg_str = {.str = arg_str_str, .len = (size_t) arg_str_len};
-
-    cmd_str->str = strndup(now_str, cmd_str_len);
-    arg_str->str = strndup(arg_str_str, cmd_str_len);
-
-    free(now_str);
     return 0;
 }
 
 
 int cmd_def(string cmd_str) {
-
+    char* cmd_str_ptr = cmd_str.str;
+    skipn_spaces(cmd_str.str, &cmd_str.str, cmd_str.len);
+    $s(cmd_str.str);
     int cmd_n_rd = 0;
-    for (cmd_n_rd = 0; cmd_n_rd < CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT && strncmp(cmd_str.str, cmd_l[cmd_n_rd].name, cmd_str.len); cmd_n_rd++) {}
+    for (cmd_n_rd = 0; cmd_n_rd < CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT && strncmp(cmd_str.str, cmd_l[cmd_n_rd].name, (size_t) cmd_str.len); cmd_n_rd++) {}
 
     if (cmd_n_rd == CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT) {
 
@@ -261,8 +231,10 @@ int arg_def(string arg_str, double* arg_rd) {
     // double arg_rd = NAN;
 
     sscanf(arg_str.str, "%lg%n", arg_rd, &nread);
-
-    if ((nread == 0 && arg_str.len > 1) || is_onlyspace({.str = arg_str.str + nread, .len = arg_str.len - nread})) {
+    $d(nread);
+    $s(arg_str.str + nread);
+    $d(is_onlyspace({.str = arg_str.str + nread, .len = arg_str.len - nread}));
+    if ((nread == 0 && arg_str.len > 1) || !is_onlyspace({.str = arg_str.str + nread, .len = arg_str.len - nread})) {
 
         return 1;
     }

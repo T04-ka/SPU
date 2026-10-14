@@ -1,5 +1,6 @@
-PSH 12
-PSH 13.1
+  PPSH   121212
+    PSH     13.1    
+
 ADD ; YASHA PIDORAS
 PSH 25
 MUL
