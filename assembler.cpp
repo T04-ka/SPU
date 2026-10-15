@@ -8,20 +8,27 @@
 #include "enum.h"
 
 #include <ctype.h>
-#include <limits>
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
 
+//----------------------------------------------------------------------------------------------------------------
+
 #define CALC_EXPANENT_COEFF 1000
 
-struct asm_fl_t
+//----------------------------------------------------------------------------------------------------------------
+
+struct asm_data_t
 {
-    FILE* inp_fl;
-    FILE* asm_lst_fl;
-    FILE* bin_fl;
-    str_t inpfl_nm, asm_lst_fl_nm, bin_fl_nm;
+    stack_t     code_buf;
+    stack_t     tag_buf;
+    FILE*       inp_fl;
+    FILE*       asm_lst_fl;
+    FILE*       bin_fl;
+    str_t       inpfl_nm, asm_lst_fl_nm, bin_fl_nm;
 };
+
+//----------------------------------------------------------------------------------------------------------------
 
 void errlog(str_t flnm, int nln, str_t str, str_t err_msg);
 
@@ -31,47 +38,42 @@ bool is_onlyspace(string str);
 /// If all n symbols are spaces, return 0, else return 1 and put in "str_ptr" the pointer on first non-space symbol.
 int skipn_spaces(const char* str, const char** str_ptr, int n);
 
-void comlipe_lines(filedata fldata, asm_fl_t asm_fl_data, stack_t* stk_ptr);
+void comlipe_lines(filedata fldata, asm_data_t* asm_data);
 
 int cmd_def(string cmd_str);
 
 int arg_def(string arg_str, double* arg_rd);
 
-int return_data(asm_fl_t asm_fl_data, stack_t stk_ptr);
+int return_data(asm_data_t asm_data);
 
-int asm_fl_ctor(asm_fl_t* asm_fl_data);
+int asm_data_ctor(asm_data_t* asm_data);
 
-int asm_fl_dtor(asm_fl_t* asm_fl_data);
+int asm_data_dtor(asm_data_t* asm_data);
 
+//----------------------------------------------------------------------------------------------------------------
 
 int main(int argc, char** argv) {
 
-    asm_fl_t asm_fl_data = {.inpfl_nm = argv[1], .asm_lst_fl_nm = "asmlist.txt", .bin_fl_nm = "code.bin"};
+    asm_data_t asm_fl_data = {.inpfl_nm = argv[1], .asm_lst_fl_nm = "asmlist.txt", .bin_fl_nm = "code.bin"};
 
-    asm_fl_ctor(&asm_fl_data);
+    asm_data_ctor(&asm_fl_data);
 
     filedata fldata = {.fl = asm_fl_data.inp_fl};
 
     rdfrmfl(&fldata);
 
-    stack_t stk =  {};
-
-    STACK_CTOR(stk, 4);
-
     #define WRITE_DATA
-    comlipe_lines(fldata, asm_fl_data, &stk);
+    comlipe_lines(fldata, &asm_fl_data);
 
-    return_data(asm_fl_data, stk);
+    return_data(asm_fl_data);
 
-    STACK_DTOR(stk);
-
-    asm_fl_dtor(&asm_fl_data);
-
+    asm_data_dtor(&asm_fl_data);
     filedatastrdestr(&fldata); //YASHA YEBANIY PIDOR DOLBOEB, NE UMEET CHITAT` SLOVA NA ANGLIYSKOM
 
     return 0;
 }
 
+//----------------------------------------------------------------------------------------------------------------
 
 void errlog(str_t flnm, int nln, str_t str, str_t err_msg) {
 
@@ -79,6 +81,7 @@ void errlog(str_t flnm, int nln, str_t str, str_t err_msg) {
     fprintf(stderr, "%5d | %s\n%5s |\n", nln, str, "");
 }
 
+//----------------------------------------------------------------------------------------------------------------
 
 bool is_onlyspace(string str) {
 
@@ -93,46 +96,43 @@ bool is_onlyspace(string str) {
     return true;
 }
 
+//----------------------------------------------------------------------------------------------------------------
 
 /// Skips no more then n first spaces, or until '\0' is found
 /// If all symbols are spaces, return 0, else return 1 and put in "str_ptr" the pointer on first non-space symbol.
 int skipn_spaces(const char* str, const char** str_ptr, int n) {
 
-    //$std("-----------------------\n");
-    //$s(str);
     int i = 0;
     for (i = 0; i < n && str[i] == ' ' && str[i] != '\0'; i++) {}
-
-    //$d(i);
 
     if (i < n && str[i] != '\0') {
 
         if (str_ptr != NULL) {
 
             *str_ptr = str + i;
-
-            //$s((str_t) *str_ptr);
         }
-        //$std("1-----------------------\n");
+
         return 1;
     }
-    //$std("-----------------------\n");
 
     return 0;
 }
+
+//----------------------------------------------------------------------------------------------------------------
 
 //TODO: указатели
 //TODO: писать данные в массив
 #define BREAK_CICL  free(cmd_str.str); free(arg_str.str); break;
 
 #define ON_ERROR_BREAK(MSG)                                             \
-    errlog(asm_fl_data.inpfl_nm, nln, fldata.prsdbffr[nln].str, #MSG);  \
+    errlog(asm_data->inpfl_nm, nln, fldata.prsdbffr[nln].str, #MSG);    \
     free(cmd_str.str);                                                  \
     free(arg_str.str);                                                  \
     break;
 
+//----------------------------------------------------------------------------------------------------------------
 
-void comlipe_lines(filedata fldata, asm_fl_t asm_fl_data, stack_t* stk_ptr) {
+void comlipe_lines(filedata fldata, asm_data_t* asm_data) {
 
     for (int nln = 0; nln < fldata.nlns; nln++) {
 
@@ -159,15 +159,8 @@ void comlipe_lines(filedata fldata, asm_fl_t asm_fl_data, stack_t* stk_ptr) {
         arg_str.len = argstr_def_len - (int) (arg_str_ptr - fldata.prsdbffr[nln].str - cmdstr_def_len - 1);
         cmd_str.len = cmdstr_def_len - (int) (cmd_str_ptr - fldata.prsdbffr[nln].str - 1);
 
-        // $s(cmd_str.str);
-        // $d(cmd_str.len);
-        // $s(arg_str.str);
-        // $d(arg_str.len);
-
         //IF NO ARG - NULL
         int cmd_n_rd = cmd_def(cmd_str);
-
-        // $d(cmd_n_rd);
 
         if (cmd_n_rd == -1) {
 
@@ -180,9 +173,6 @@ void comlipe_lines(filedata fldata, asm_fl_t asm_fl_data, stack_t* stk_ptr) {
 
             ON_ERROR_BREAK("Wrong parametr given")
         }
-
-        // $d(cmdstr_def_len);
-        // $d(argstr_def_len);
 
         if  (cmd_l[cmd_n_rd].argqty) {
 
@@ -197,8 +187,8 @@ void comlipe_lines(filedata fldata, asm_fl_t asm_fl_data, stack_t* stk_ptr) {
                 ON_ERROR_BREAK("Too many arguments given")
             }
             #ifdef WRITE_DATA
-            STACK_PUSH(stk_ptr, cmd_n_rd);
-            STACK_PUSH(stk_ptr, (int) (arg_rd * SPU_EXPANENT_COEFF));
+            STACK_PUSH(&asm_data->code_buf, cmd_n_rd);
+            STACK_PUSH(&asm_data->code_buf, (int) (arg_rd * SPU_EXPANENT_COEFF));
             #endif
             //fprintf(outfl, "%d %d ", cmd_n_rd, (int) (arg_rd * SPU_EXPANENT_COEFF));
         }
@@ -209,7 +199,7 @@ void comlipe_lines(filedata fldata, asm_fl_t asm_fl_data, stack_t* stk_ptr) {
                 ON_ERROR_BREAK("Too many arguments given")
             }
             #ifdef WRITE_DATA
-            STACK_PUSH(stk_ptr, cmd_n_rd);
+            STACK_PUSH(&asm_data->code_buf, cmd_n_rd);
             #endif
             // fprintf(outfl, "%d ", cmd_n_rd);
         }
@@ -217,9 +207,9 @@ void comlipe_lines(filedata fldata, asm_fl_t asm_fl_data, stack_t* stk_ptr) {
         free(cmd_str.str);
         free(arg_str.str);
     }
-
-
 }
+
+//----------------------------------------------------------------------------------------------------------------
 
 /// return cmd enum if cmd is correct and -1 if not.
 int cmd_def(string cmd_str) {
@@ -236,6 +226,9 @@ int cmd_def(string cmd_str) {
 
     return cmd_l[cmd_n_rd].num;
 }
+
+//----------------------------------------------------------------------------------------------------------------
+
 // nan + ret0 - emoty arg_str, nan + ret1 - wrong arg_str, dbl + ret0 - correct convert
 /// return 0 if arg_str was empty and set arg_rd if double converted correctly, return 1 if was no convert (wrong arg_str)
 int arg_def(string arg_str, double* arg_rd) {
@@ -260,38 +253,48 @@ int arg_def(string arg_str, double* arg_rd) {
     return 0;
 }
 
+//----------------------------------------------------------------------------------------------------------------
 
-int return_data(asm_fl_t asm_fl_data, stack_t stk) {
+int return_data(asm_data_t asm_data) {
 
-    fwrite(stk.bffr, sizeof(int), stk.cpty, asm_fl_data.bin_fl);
+    fwrite(asm_data.code_buf.bffr, sizeof(int), asm_data.code_buf.cpty, asm_data.bin_fl);
 
-    for (size_t pc = 0; pc < stk.cpty; pc++) {
+    for (size_t pc = 0; pc < asm_data.code_buf.cpty; pc++) {
 
-        fprintf(asm_fl_data.asm_lst_fl, "%d ", stk.bffr[pc]);
+        fprintf(asm_data.asm_lst_fl, "%d ", asm_data.code_buf.bffr[pc]);
     }
 
     return 0;
 }
 
+//----------------------------------------------------------------------------------------------------------------
 
 //TODO СДЕЛАТЬ ОБРАБТКУ ОШИБОК
-int asm_fl_ctor(asm_fl_t* asm_fl_data) {
+int asm_data_ctor(asm_data_t* asm_data) {
 
-    asm_fl_data->inp_fl      = fopen(asm_fl_data.inpfl_nm, "r");
-    asm_fl_data->asm_lst_fl  = fopen(asm_fl_data.asm_lst_fl_nm, "w");
-    asm_fl_data->bin_fl      = fopen(asm_fl_data.bin_fl_nm, "wb");
+    STACK_CTOR(asm_data->tag_buf, 4);
+    STACK_CTOR(asm_data->code_buf, 4);
+
+    asm_data->inp_fl      = fopen(asm_data->inpfl_nm, "r");
+    asm_data->asm_lst_fl  = fopen(asm_data->asm_lst_fl_nm, "w");
+    asm_data->bin_fl      = fopen(asm_data->bin_fl_nm, "wb");
 
     return 0;
 }
 
-
+//----------------------------------------------------------------------------------------------------------------
 
 //TODO СДЕЛАТЬ ОБРАБТКУ ОШИБОК
-int asm_fl_dtor(asm_fl_t* asm_fl_data) {
+int asm_data_dtor(asm_data_t* asm_data) {
 
-    fclose(asm_fl_data->inp_fl);
-    fclose(asm_fl_data->asm_lst_fl);
-    fclose(asm_fl_data->bin_fl);
+    STACK_DTOR(asm_data->tag_buf);
+    STACK_DTOR(asm_data->code_buf);
+
+    fclose(asm_data->inp_fl);
+    fclose(asm_data->asm_lst_fl);
+    fclose(asm_data->bin_fl);
 
     return 0;
 }
+
+//----------------------------------------------------------------------------------------------------------------
