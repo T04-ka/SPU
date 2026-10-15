@@ -1,4 +1,7 @@
 HLT
+: 2
+: 3
 PSH 133
-PSH   0  
+JMP : 2
+PSH 12  
 HLT
