@@ -1,4 +1,4 @@
-PSH 12,1
+HLT
 PSH 133
 PSH   0  
 HLT

@@ -1,0 +1,297 @@
+#include "./../../myformat.cpp"
+
+#include "./../Onegin/strfuncs.h"
+#include "./../Onegin/io.h"
+
+#include "./../Stack/stack.h"
+
+#include "enum.h"
+
+#include <ctype.h>
+#include <limits>
+#include <stdio.h>
+#include <string.h>
+#include <math.h>
+
+#define CALC_EXPANENT_COEFF 1000
+
+struct asm_fl_t
+{
+    FILE* inp_fl;
+    FILE* asm_lst_fl;
+    FILE* bin_fl;
+    str_t inpfl_nm, asm_lst_fl_nm, bin_fl_nm;
+};
+
+void errlog(str_t flnm, int nln, str_t str, str_t err_msg);
+
+bool is_onlyspace(string str);
+
+/// Skips no more then n first spaces, or until '\0' is found
+/// If all n symbols are spaces, return 0, else return 1 and put in "str_ptr" the pointer on first non-space symbol.
+int skipn_spaces(const char* str, const char** str_ptr, int n);
+
+void comlipe_lines(filedata fldata, asm_fl_t asm_fl_data, stack_t* stk_ptr);
+
+int cmd_def(string cmd_str);
+
+int arg_def(string arg_str, double* arg_rd);
+
+int return_data(asm_fl_t asm_fl_data, stack_t stk_ptr);
+
+int asm_fl_ctor(asm_fl_t* asm_fl_data);
+
+int asm_fl_dtor(asm_fl_t* asm_fl_data);
+
+
+int main(int argc, char** argv) {
+
+    asm_fl_t asm_fl_data = {.inpfl_nm = argv[1], .asm_lst_fl_nm = "asmlist.txt", .bin_fl_nm = "code.bin"};
+
+    asm_fl_ctor(&asm_fl_data);
+
+    filedata fldata = {.fl = asm_fl_data.inp_fl};
+
+    rdfrmfl(&fldata);
+
+    stack_t stk =  {};
+
+    STACK_CTOR(stk, 4);
+
+    #define WRITE_DATA
+    comlipe_lines(fldata, asm_fl_data, &stk);
+
+    return_data(asm_fl_data, stk);
+
+    STACK_DTOR(stk);
+
+    asm_fl_dtor(&asm_fl_data);
+
+    filedatastrdestr(&fldata); //YASHA YEBANIY PIDOR DOLBOEB, NE UMEET CHITAT` SLOVA NA ANGLIYSKOM
+
+    return 0;
+}
+
+
+void errlog(str_t flnm, int nln, str_t str, str_t err_msg) {
+
+    fprintf(stderr, FAT"%s:%d: " RED"Syntax error: " DEF"%s.\n", flnm, nln + 1, err_msg);
+    fprintf(stderr, "%5d | %s\n%5s |\n", nln, str, "");
+}
+
+
+bool is_onlyspace(string str) {
+
+    for (int i = 0; i < str.len - 1; i++) {
+
+        if (!isspace(str.str[i])) {
+
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
+/// Skips no more then n first spaces, or until '\0' is found
+/// If all symbols are spaces, return 0, else return 1 and put in "str_ptr" the pointer on first non-space symbol.
+int skipn_spaces(const char* str, const char** str_ptr, int n) {
+
+    //$std("-----------------------\n");
+    //$s(str);
+    int i = 0;
+    for (i = 0; i < n && str[i] == ' ' && str[i] != '\0'; i++) {}
+
+    //$d(i);
+
+    if (i < n && str[i] != '\0') {
+
+        if (str_ptr != NULL) {
+
+            *str_ptr = str + i;
+
+            //$s((str_t) *str_ptr);
+        }
+        //$std("1-----------------------\n");
+        return 1;
+    }
+    //$std("-----------------------\n");
+
+    return 0;
+}
+
+//TODO: указатели
+//TODO: писать данные в массив
+#define BREAK_CICL  free(cmd_str.str); free(arg_str.str); break;
+
+#define ON_ERROR_BREAK(MSG)                                             \
+    errlog(asm_fl_data.inpfl_nm, nln, fldata.prsdbffr[nln].str, #MSG);  \
+    free(cmd_str.str);                                                  \
+    free(arg_str.str);                                                  \
+    break;
+
+
+void comlipe_lines(filedata fldata, asm_fl_t asm_fl_data, stack_t* stk_ptr) {
+
+    for (int nln = 0; nln < fldata.nlns; nln++) {
+
+        //$s(fldata.prsdbffr[nln].str);
+        if (is_onlyspace(fldata.prsdbffr[nln])) {
+
+            //$;
+            continue;
+        }
+
+        char* cmd_str_ptr = {};
+        char* arg_str_ptr = {};
+
+        string cmd_str = {}, arg_str = {};
+
+        int cmdstr_def_len = 0, argstr_def_len = 0;
+
+        sscanf(fldata.prsdbffr[nln].str, "%ms%n", &cmd_str.str, &cmdstr_def_len);
+        sscanf(fldata.prsdbffr[nln].str + cmdstr_def_len, "%ms%n", &arg_str.str, &argstr_def_len);
+
+        skipn_spaces(fldata.prsdbffr[nln].str, (const char**) &cmd_str_ptr , cmdstr_def_len);
+        skipn_spaces(fldata.prsdbffr[nln].str + cmdstr_def_len, (const char**) &arg_str_ptr , argstr_def_len);
+
+        arg_str.len = argstr_def_len - (int) (arg_str_ptr - fldata.prsdbffr[nln].str - cmdstr_def_len - 1);
+        cmd_str.len = cmdstr_def_len - (int) (cmd_str_ptr - fldata.prsdbffr[nln].str - 1);
+
+        // $s(cmd_str.str);
+        // $d(cmd_str.len);
+        // $s(arg_str.str);
+        // $d(arg_str.len);
+
+        //IF NO ARG - NULL
+        int cmd_n_rd = cmd_def(cmd_str);
+
+        // $d(cmd_n_rd);
+
+        if (cmd_n_rd == -1) {
+
+            ON_ERROR_BREAK("Wrong command given")
+        }
+
+        double arg_rd = NAN;
+
+        if (arg_def(arg_str, &arg_rd)) {
+
+            ON_ERROR_BREAK("Wrong parametr given")
+        }
+
+        // $d(cmdstr_def_len);
+        // $d(argstr_def_len);
+
+        if  (cmd_l[cmd_n_rd].argqty) {
+
+            if (isnan(arg_rd)) {
+
+                ON_ERROR_BREAK("Miss an argument")
+            }
+
+
+            if (!is_onlyspace({.str = fldata.prsdbffr[nln].str + cmdstr_def_len + argstr_def_len, .len = fldata.prsdbffr[nln].len - cmdstr_def_len - argstr_def_len})) {
+
+                ON_ERROR_BREAK("Too many arguments given")
+            }
+            #ifdef WRITE_DATA
+            STACK_PUSH(stk_ptr, cmd_n_rd);
+            STACK_PUSH(stk_ptr, (int) (arg_rd * SPU_EXPANENT_COEFF));
+            #endif
+            //fprintf(outfl, "%d %d ", cmd_n_rd, (int) (arg_rd * SPU_EXPANENT_COEFF));
+        }
+        else {
+
+            if (!isnan(arg_rd)) {
+
+                ON_ERROR_BREAK("Too many arguments given")
+            }
+            #ifdef WRITE_DATA
+            STACK_PUSH(stk_ptr, cmd_n_rd);
+            #endif
+            // fprintf(outfl, "%d ", cmd_n_rd);
+        }
+
+        free(cmd_str.str);
+        free(arg_str.str);
+    }
+
+
+}
+
+/// return cmd enum if cmd is correct and -1 if not.
+int cmd_def(string cmd_str) {
+
+    skipn_spaces(cmd_str.str, (const char**) &cmd_str.str, cmd_str.len);
+
+    int cmd_n_rd = 0;
+    for (cmd_n_rd = 0; cmd_n_rd < CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT && strncmp(cmd_str.str, cmd_l[cmd_n_rd].name, (size_t) cmd_str.len); cmd_n_rd++) {}
+
+    if (cmd_n_rd == CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT) {
+
+        return -1;
+    }
+
+    return cmd_l[cmd_n_rd].num;
+}
+// nan + ret0 - emoty arg_str, nan + ret1 - wrong arg_str, dbl + ret0 - correct convert
+/// return 0 if arg_str was empty and set arg_rd if double converted correctly, return 1 if was no convert (wrong arg_str)
+int arg_def(string arg_str, double* arg_rd) {
+
+    int nread = 0;
+    // double arg_rd = NAN;
+
+    if (arg_str.str == NULL) {
+
+        return 0;
+    }
+
+    sscanf(arg_str.str, "%lg%n", arg_rd, &nread);
+    //$d(nread);
+    //$s(arg_str.str + nread);
+    //$d(is_onlyspace({.str = arg_str.str + nread, .len = arg_str.len - nread}));
+    if (nread == 0) {
+
+        return 1;
+    }
+
+    return 0;
+}
+
+
+int return_data(asm_fl_t asm_fl_data, stack_t stk) {
+
+    fwrite(stk.bffr, sizeof(int), stk.cpty, asm_fl_data.bin_fl);
+
+    for (size_t pc = 0; pc < stk.cpty; pc++) {
+
+        fprintf(asm_fl_data.asm_lst_fl, "%d ", stk.bffr[pc]);
+    }
+
+    return 0;
+}
+
+
+//TODO СДЕЛАТЬ ОБРАБТКУ ОШИБОК
+int asm_fl_ctor(asm_fl_t* asm_fl_data) {
+
+    asm_fl_data->inp_fl      = fopen(asm_fl_data.inpfl_nm, "r");
+    asm_fl_data->asm_lst_fl  = fopen(asm_fl_data.asm_lst_fl_nm, "w");
+    asm_fl_data->bin_fl      = fopen(asm_fl_data.bin_fl_nm, "wb");
+
+    return 0;
+}
+
+
+
+//TODO СДЕЛАТЬ ОБРАБТКУ ОШИБОК
+int asm_fl_dtor(asm_fl_t* asm_fl_data) {
+
+    fclose(asm_fl_data->inp_fl);
+    fclose(asm_fl_data->asm_lst_fl);
+    fclose(asm_fl_data->bin_fl);
+
+    return 0;
+}
