@@ -1,7 +1,2 @@
-HLT
-: 2
-: 3
-PSH 133
-JMP : 2
-PSH 12  
+MEOW 10
 HLT

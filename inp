@@ -1,0 +1,8 @@
+PSH 1
+: 1
+PSH 1
+ADD
+PSH 10
+JMPNE : 1
+OUT
+HLT
