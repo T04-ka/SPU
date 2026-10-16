@@ -31,6 +31,29 @@ struct asm_data_t
 
 //----------------------------------------------------------------------------------------------------------------
 
+enum asm_err_t
+{
+    asm_err_NO_ERR      = 0,
+    asm_err_WRONG_TAG   = 1,
+    asm_err_WRONG_CMD   = 2,
+    asm_err_WRONG_ARG   = 3,
+    asm_err_MISS_TAG    = 4,
+    asm_err_MISS_ARG    = 5,
+    asm_err_ARG_QTY_EXC = 6,
+    asm_err_TAG_VAL_EXC = 7,
+    asm_err_TAG_NO_EXST = 8,
+    asm_err_TAG_QTY_EXC = 9
+};
+
+enum arg_def_ret_t
+{
+    arg_def_ret_OK          = 0,
+    arg_def_ret_WRONG_ARG   = 1,
+    arg_def_ret_TAG         = -1
+};
+
+//----------------------------------------------------------------------------------------------------------------
+
 void errlog(str_t flnm, int nln, str_t str, str_t err_msg);
 
 bool is_onlyspace(string str);
@@ -39,19 +62,17 @@ bool is_onlyspace(string str);
 /// If all n symbols are spaces, return 0, else return 1 and put in "str_ptr" the pointer on first non-space symbol.
 int skipn_spaces(const char* str, const char** str_ptr, int n);
 
-int compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr);
+asm_err_t compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr);
 
 int cmd_def(string cmd_str);
 
-int arg_def(string arg_str, double* arg_rd);
+arg_def_ret_t arg_def(string arg_str, double* arg_rd);
 
 int return_data(asm_data_t asm_data);
 
 int asm_data_ctor(asm_data_t* asm_data_ptr);
 
 int asm_data_dtor(asm_data_t* asm_data_ptr);
-
-string get_string(filedata filedata, int nln);
 
 //----------------------------------------------------------------------------------------------------------------
 
@@ -63,18 +84,24 @@ int main(int argc, char** argv) {
     if (asm_fl_data.inp_fl == NULL) {
 
         fprintf(stderr, "No such file.\n");
+        asm_data_dtor(&asm_fl_data);
         return 1;
     }
 
     filedata fldata = {.fl = asm_fl_data.inp_fl};
     rdfrmfl(&fldata);
 
-    int compile_ok = compile_lines(false, fldata, &asm_fl_data);
+    asm_err_t compile_ok = compile_lines(false, fldata, &asm_fl_data);
 
     //$ad(asm_fl_data.tag_buf, 10);
 
     if (!compile_ok) {
-    compile_lines(true, fldata, &asm_fl_data);
+
+        compile_lines(true, fldata, &asm_fl_data);
+    }
+    else {
+
+        //asm_err_handle();
     }
 
     return_data(asm_fl_data);
@@ -136,12 +163,11 @@ int skipn_spaces(const char* str, const char** str_ptr, int n) {
 //TODO: писать данные в массив
 #define CONTINUE_CICL  free(current_asm_t.cmd_str.str); free(current_asm_t.arg_str.str); free(current_asm_t.tag_str.str); continue;
 
-#define ON_ERROR_BREAK(MSG)                                                               \
-    errlog(asm_data_ptr->inpfl_nm, nln, fldata.prsdbffr[nln].str, MSG);                    \
+#define ON_RETURN(TP)                                                                      \
     free(current_asm_t.cmd_str.str);                                                      \
     free(current_asm_t.arg_str.str);                                                      \
     free(current_asm_t.tag_str.str);                                                      \
-    return 1;
+    return TP;
 
 //----------------------------------------------------------------------------------------------------------------
 
@@ -156,7 +182,7 @@ struct current_asm_t {
 
 int parse_line(filedata fldata, int nln, current_asm_t* current_asm_t);
 
-int compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr) {
+asm_err_t compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr) {
 
     for (int nln = 0; nln < fldata.nlns; nln++) {
 
@@ -179,12 +205,11 @@ int compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr) {
         // $d(tag_str.len);
 
 
-        //IF NO ARG - NULL
         int cmd_n_rd = cmd_def(current_asm_t.cmd_str);
 
         if (cmd_n_rd == CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT) {
 
-            ON_ERROR_BREAK("Wrong command given")
+            ON_RETURN(asm_err_WRONG_CMD);
         }
 
         double arg_rd = NAN;
@@ -194,22 +219,22 @@ int compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr) {
 
             if (arg_def_ret){
 
-                ON_ERROR_BREAK("Wrong tag name")
+                ON_RETURN(asm_err_WRONG_TAG);
             }
 
             if (isnan(arg_rd)) {
 
-                ON_ERROR_BREAK("Miss a tag")
+                ON_RETURN(asm_err_MISS_TAG);
             }
 
             if (!is_onlyspace({.str = fldata.prsdbffr[nln].str + current_asm_t.cmd_str_def_len + current_asm_t.arg_str_def_len, .len = fldata.prsdbffr[nln].len - current_asm_t.cmd_str_def_len - current_asm_t.arg_str_def_len})) {
 
-                ON_ERROR_BREAK("Too many arguments given")
+                ON_RETURN(asm_err_ARG_QTY_EXC);
             }
 
             if ((int) arg_rd > MAX_TAG_QTY) {
 
-                ON_ERROR_BREAK("Too big tag number");
+                ON_RETURN(asm_err_TAG_VAL_EXC);
             }
             //МЕТКА УСТАНАВЛИВАЕТСЯ НА ЗНАЧЕНИЕ ПС, СЛЕДУЮЩЕЕ ПОСЛЕ МЕТКИ
 
@@ -222,7 +247,7 @@ int compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr) {
 
          if (arg_def_ret == 1) {
 
-             ON_ERROR_BREAK("Wrong parametr given1")
+             ON_RETURN(asm_err_WRONG_ARG);
          }
 
         if (cmd_l[cmd_n_rd].tag) {
@@ -234,24 +259,24 @@ int compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr) {
 
                 if (tag_def_ret) {
 
-                    ON_ERROR_BREAK("Wrong tag given1")
+                    ON_RETURN(asm_err_WRONG_TAG);
                 }
 
                 if (isnan(tag_rd)) {
 
-                    ON_ERROR_BREAK("Miss a tag")
+                    ON_RETURN(asm_err_MISS_TAG);
                 }
 
 
                 if (!is_onlyspace({.str = fldata.prsdbffr[nln].str + current_asm_t.cmd_str_def_len + current_asm_t.arg_str_def_len + current_asm_t.tag_str_def_len, \
                                    .len = fldata.prsdbffr[nln].len - current_asm_t.cmd_str_def_len - current_asm_t.arg_str_def_len - current_asm_t.tag_str_def_len})) {
 
-                    ON_ERROR_BREAK("Too many arguments given1")
+                    ON_RETURN(asm_err_ARG_QTY_EXC);
                 }
 
                 if (!on_write && asm_data_ptr->tag_buf[(int) tag_rd] == -1) {
 
-                    ON_ERROR_BREAK("Such a tag doesn't exist")
+                    ON_RETURN(asm_err_TAG_NO_EXST);
                 }
                 if (on_write) {
 
@@ -263,27 +288,27 @@ int compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr) {
             }
             else {
 
-                ON_ERROR_BREAK("Miss a tag")
+                ON_RETURN(asm_err_MISS_TAG);
             }
         }
 
         if (arg_def_ret == -1) {
 
-            ON_ERROR_BREAK("Too many tags given");
+            ON_RETURN(asm_err_TAG_QTY_EXC)
         }
 
         if  (cmd_l[cmd_n_rd].argqty) {
 
             if (isnan(arg_rd)) {
 
-                ON_ERROR_BREAK("Miss an argument")
+                ON_RETURN(asm_err_MISS_ARG);
             }
 
 
             if (!is_onlyspace({.str = fldata.prsdbffr[nln].str + current_asm_t.cmd_str_def_len + current_asm_t.arg_str_def_len, \
                                .len = fldata.prsdbffr[nln].len - current_asm_t.cmd_str_def_len - current_asm_t.arg_str_def_len})) {
 
-                ON_ERROR_BREAK("Too many arguments given")
+                ON_RETURN(asm_err_ARG_QTY_EXC);
             }
 
             if (on_write) {
@@ -298,7 +323,7 @@ int compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr) {
 
             if (!isnan(arg_rd)) {
 
-                ON_ERROR_BREAK("Too many arguments given")
+                ON_RETURN(asm_err_ARG_QTY_EXC);
             }
 
             if (on_write) {
@@ -314,7 +339,7 @@ int compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr) {
         free(current_asm_t.tag_str.str);
     }
 
-    return 0;
+    return asm_err_NO_ERR;
 }
 
 
@@ -345,7 +370,7 @@ int cmd_def(string cmd_str) {
 
     int cmd_n_rd = 0;
 
-    if (!strncmp(cmd_str.str, ":", cmd_str.len)) {
+    if (!strncmp(cmd_str.str, ":", (size_t) cmd_str.len)) {
 
         return -1;
     }
@@ -365,19 +390,19 @@ int cmd_def(string cmd_str) {
 // nan + ret0 - emoty arg_str, nan + ret1 - wrong arg_str, dbl + ret0 - correct convert
 /// return 0 if arg_str was empty and set arg_rd if double converted correctly, return 1 if was no convert (wrong arg_str)
 /// return -1 if argement is tag
-int arg_def(string arg_str, double* arg_rd) {
+arg_def_ret_t arg_def(string arg_str, double* arg_rd) {
 
     int nread = 0;
     // double arg_rd = NAN;
 
     if (arg_str.str == NULL) {
 
-        return 0;
+        return arg_def_ret_OK;
     }
 
-    if (!strncmp(arg_str.str, ":", arg_str.len)) {
+    if (!strncmp(arg_str.str, ":", (size_t) arg_str.len)) {
 
-        return -1;
+        return arg_def_ret_TAG;
     }
 
     sscanf(arg_str.str, "%lg%n", arg_rd, &nread);
@@ -386,10 +411,10 @@ int arg_def(string arg_str, double* arg_rd) {
     //$d(is_onlyspace({.str = arg_str.str + nread, .len = arg_str.len - nread}));
     if (nread == 0) {
 
-        return 1;
+        return arg_def_ret_WRONG_ARG;
     }
 
-    return 0;
+    return arg_def_ret_OK;
 }
 
 //----------------------------------------------------------------------------------------------------------------
