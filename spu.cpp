@@ -1,9 +1,8 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include "./../Stack/stack.h"
 #include "./../Onegin/strfuncs.h"
 #include "enum.h"
-#include <algorithm>
-#include <stdio.h>
-#include <stdlib.h>
 
 #define LOGFL stderr
 
@@ -27,9 +26,10 @@ struct spu_t
     int*        cmdbuf;
     int         cmdbuflen;
     int         pc;
-    stack_t    stk;
+    stack_t     stk;
     cmd_err     onbreak;
     int*        regbuf;
+    stack_t     calltree;
 };
 
 //----------------------------------------------------------------------------------------------------------------
@@ -62,7 +62,13 @@ int spu_jump_if_nsmllr(spu_t* spu_t);
 
 int spu_jump_if_neq(spu_t* spu_t);
 
-int spu_meow(spu_t* spu_t);
+int spu_call(spu_t* spu_t);
+
+int spu_ret(spu_t* spu_t);
+
+int spu_pushr(spu_t* spu_t);
+
+int spu_popr(spu_t* spu_t);
 
 //----------------------------------------------------------------------------------------------------------------
 
@@ -70,7 +76,7 @@ typedef int spu_opfnc_t(spu_t* spu_t);
 
 //----------------------------------------------------------------------------------------------------------------
 
-spu_opfnc_t* cmd_opfunc_t [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT] =
+spu_opfnc_t* cmd_opfnc_t [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT] =
 
 // int (*cmd_l[CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT])(spu_t*, stack_t*, cmd_err*) =
     {
@@ -88,18 +94,29 @@ spu_opfnc_t* cmd_opfunc_t [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEP
         spu_jump_if_nbggr,
         spu_jump_if_nsmllr,
         spu_jump_if_neq,
-        spu_meow
+        spu_call,
+        spu_ret,
+        spu_pushr,
+        spu_popr
     };
+
+
+
+void cmd_opfnc_t_init() {
+
+
+    // cmd_opfnc_t[0] = spu_ret;
+}
 
 //----------------------------------------------------------------------------------------------------------------
 
 int spu_push(spu_t* spu_t) {
 
-    if (spu_t->pc < 0 || spu_t->pc > spu_t->cmdbuflen) {
-
-        spu_t->onbreak = cmd_t_WRONG_PC;
-        return 1;
-    }
+//     if (spu_t->pc < 0 || spu_t->pc > spu_t->cmdbuflen) {
+//
+//         spu_t->onbreak = cmd_t_WRONG_PC;
+//         return 1;
+//     }
 
     spu_t->pc++;
 
@@ -342,8 +359,7 @@ int spu_jump_if_neq(spu_t* spu_t) {
     }
     else {
 
-        spu_t->pc ++;
-        spu_t->pc ++;
+        spu_t->pc += 2;
     }
 
     STACK_PUSH(&spu_t->stk, frst_chr);
@@ -351,14 +367,45 @@ int spu_jump_if_neq(spu_t* spu_t) {
     return 0;
 }
 
-int spu_meow(spu_t* spu_t) {
+//----------------------------------------------------------------------------------------------------------------
+
+int spu_call(spu_t* spu_t) {
+
+    STACK_PUSH(&spu_t->calltree, spu_t->pc + 2);
+
+    spu_t->pc = spu_t->cmdbuf[spu_t->pc + 1];
+
+    return 0;
+}
+
+//----------------------------------------------------------------------------------------------------------------
+
+int spu_ret(spu_t* spu_t) {
+
+    STACK_POP(&spu_t->calltree, &spu_t->pc);
+
+    return 0;
+}
+
+//----------------------------------------------------------------------------------------------------------------
+
+int spu_pushr(spu_t* spu_t) {
 
     spu_t->pc ++;
 
-    for (int i = 0; i < spu_t->cmdbuf [spu_t->pc] / SPU_EXPANENT_COEFF; i++) {
+    STACK_PUSH(&spu_t->stk, spu_t->regbuf[spu_t->cmdbuf[spu_t->pc]]);
 
-        printf("DED PIDORAS\n");
-    }
+    spu_t->pc ++;
+
+    return 0;
+}
+
+//----------------------------------------------------------------------------------------------------------------
+
+int spu_popr(spu_t* spu_t) {
+
+    spu_t->pc ++;
+    STACK_POP(&spu_t->stk, &spu_t->regbuf[spu_t->cmdbuf[spu_t->pc]]);
 
     spu_t->pc ++;
 
@@ -375,17 +422,21 @@ void spu_t_ctor(spu_t* spu_t, int argc, char** argv);
 
 void spu_t_dtor(spu_t* spu_t);
 
+void cmd_opfnc_t_init();
+
 //----------------------------------------------------------------------------------------------------------------
 
 int main(int argc, char** argv) {
+
+    cmd_opfnc_t_init();
 
     spu_t spu_t = {};
     spu_t_ctor(&spu_t, argc, argv);
 
     while (!spu_t.onbreak) {
 
-        //spu_dump(spu_t, __FILE__, __LINE__);
-        cmd_opfunc_t [spu_t.cmdbuf[spu_t.pc]] (&spu_t);
+        spu_dump(spu_t, __FILE__, __LINE__);
+        cmd_opfnc_t [spu_t.cmdbuf[spu_t.pc]] (&spu_t);
     }
 
     spu_err_print(spu_t);
@@ -406,6 +457,9 @@ void spu_dump(spu_t spu_t, str_t __file, int __line) {
     ERRLOG("\n");
 
     ERRLOG("SPU dump was called from " FAT"%s:%d.\n\n" DEF, __file, __line);
+
+    $ad(spu_t.regbuf, 5);
+
     ERRLOG("Command list:\n\n");
 
     for (int i = 0; i < spu_t.cmdbuflen; i++) {
@@ -490,6 +544,7 @@ void spu_err_print(spu_t spu_t) {
 void spu_t_ctor(spu_t* spu_t, int argc, char** argv) {
 
     STACK_CTOR(spu_t->stk, 4);
+    STACK_CTOR(spu_t->calltree, 4);
 
     spu_t->regbuf = (int*) calloc(5, sizeof(int));
     spu_t->cmdbuf = (int*) calloc(MAX_CMD_QTY, sizeof(int));
@@ -508,6 +563,7 @@ void spu_t_ctor(spu_t* spu_t, int argc, char** argv) {
 
     fclose(cmd_list_fl);
 
+    spu_t->cmdbuflen = 10;
     spu_t->pc = 0;
     spu_t->onbreak = (cmd_err) 0;
 }
@@ -517,6 +573,7 @@ void spu_t_ctor(spu_t* spu_t, int argc, char** argv) {
 void spu_t_dtor(spu_t* spu_t) {
 
     STACK_DTOR(spu_t->stk);
+    STACK_DTOR(spu_t->calltree);
     free(spu_t->regbuf);
     free(spu_t->cmdbuf);
     spu_t->pc = -1;

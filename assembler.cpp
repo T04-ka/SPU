@@ -19,19 +19,7 @@
 
 //----------------------------------------------------------------------------------------------------------------
 
-struct asm_data_t
-{
-    stack_t     code_buf;
-    int*        tag_buf;
-    FILE*       inp_fl;
-    FILE*       asm_lst_fl;
-    FILE*       bin_fl;
-    str_t       inpfl_nm, asm_lst_fl_nm, bin_fl_nm;
-};
-
-//----------------------------------------------------------------------------------------------------------------
-
-enum asm_err_t
+enum asm_err_n
 {
     asm_err_NO_ERR      = 0,
     asm_err_WRONG_TAG   = 1,
@@ -45,6 +33,19 @@ enum asm_err_t
     asm_err_TAG_QTY_EXC = 9
 };
 
+str_t ASM_ERR_MSG_L[] = {
+    "",
+    "Wrong tag given",
+    "Wrong cmd given",
+    "Wrong argument given",
+    "Miss a tag",
+    "Miss an argument",
+    "Excession of arguments quantity",
+    "Excession of tag value",
+    "Such a tag doesn't exist",
+    "Excession of tag quentity"
+};
+
 enum arg_def_ret_t
 {
     arg_def_ret_OK          = 0,
@@ -54,7 +55,35 @@ enum arg_def_ret_t
 
 //----------------------------------------------------------------------------------------------------------------
 
-void errlog(str_t flnm, int nln, str_t str, str_t err_msg);
+struct asm_data_t
+{
+    stack_t     code_buf;
+    int         code_buf_sz;
+    int*        tag_buf;
+    FILE*       inp_fl;
+    FILE*       asm_lst_fl;
+    FILE*       bin_fl;
+    str_t       inpfl_nm, asm_lst_fl_nm, bin_fl_nm;
+};
+
+struct current_asm_t {
+
+    char *cmd_str_ptr = {}, *arg_str_ptr = {}, *tag_str_ptr = {};
+    string cmd_str = {}, arg_str = {}, tag_str = {};
+    int cmd_str_def_len = 0, arg_str_def_len = 0, tag_str_def_len = 0;
+
+};
+
+struct asm_err_t {
+
+    asm_err_n errnum;
+    int nln;
+    str_t str, flnm;
+};
+
+//----------------------------------------------------------------------------------------------------------------
+
+void errlog(asm_err_t error_t);
 
 bool is_onlyspace(string str);
 
@@ -93,17 +122,18 @@ int main(int argc, char** argv) {
 
     asm_err_t compile_ok = compile_lines(false, fldata, &asm_fl_data);
 
-    //$ad(asm_fl_data.tag_buf, 10);
+    $ad(asm_fl_data.tag_buf, 10);
 
-    if (!compile_ok) {
+    if (!compile_ok.errnum) {
 
+        asm_fl_data.code_buf_sz = asm_fl_data.code_buf.sz;
         compile_lines(true, fldata, &asm_fl_data);
     }
     else {
 
-        //asm_err_handle();
+        errlog(compile_ok);
     }
-
+    $ad(asm_fl_data.tag_buf, 10);
     return_data(asm_fl_data);
 
     asm_data_dtor(&asm_fl_data);
@@ -114,10 +144,10 @@ int main(int argc, char** argv) {
 
 //----------------------------------------------------------------------------------------------------------------
 
-void errlog(str_t flnm, int nln, str_t str, str_t err_msg) {
+void errlog(asm_err_t err_t) {
 
-    fprintf(stderr, FAT"%s:%d: " RED"Syntax error: " DEF"%s.\n", flnm, nln + 1, err_msg);
-    fprintf(stderr, "%5d | %s\n%5s |\n", nln, str, "");
+    fprintf(stderr, FAT"%s:%d: " RED"Syntax error: " DEF"%s.\n", err_t.flnm, err_t.nln + 1, ASM_ERR_MSG_L[err_t.errnum]);
+    fprintf(stderr, "%5d | %s\n%5s |\n", err_t.nln, err_t.str, "");
 }
 
 //----------------------------------------------------------------------------------------------------------------
@@ -141,10 +171,15 @@ bool is_onlyspace(string str) {
 /// If all symbols are spaces, return 0, else return 1 and put in "str_ptr" the pointer on first non-space symbol.
 int skipn_spaces(const char* str, const char** str_ptr, int n) {
 
+    // fprintf(stderr, "str = |%s|\n", str);
     int i = 0;
-    for (i = 0; i < n && str[i] == ' ' && str[i] != '\0'; i++) {}
+    // $d(n);
+    for (i = 0; i < n && str[i] == ' ' && str[i] != '\0' && str[i] != EOF; i++) {
 
-    if (i < n && str[i] != '\0') {
+        // $c(str[i]);
+    }
+
+    if (i < n && str[i] != '\0' && str[i] != EOF) {
 
         if (str_ptr != NULL) {
 
@@ -161,30 +196,32 @@ int skipn_spaces(const char* str, const char** str_ptr, int n) {
 
 //TODO: указатели
 //TODO: писать данные в массив
-#define CONTINUE_CICL  free(current_asm_t.cmd_str.str); free(current_asm_t.arg_str.str); free(current_asm_t.tag_str.str); continue;
+#define CONTINUE_CICL  free(current_asm.cmd_str.str); free(current_asm.arg_str.str); free(current_asm.tag_str.str); continue;
 
-#define ON_RETURN(TP)                                                                      \
-    free(current_asm_t.cmd_str.str);                                                      \
-    free(current_asm_t.arg_str.str);                                                      \
-    free(current_asm_t.tag_str.str);                                                      \
-    return TP;
+#define ON_RETURN(TP)                                                                                               \
+    free(current_asm.cmd_str.str);                                                                                  \
+    free(current_asm.arg_str.str);                                                                                  \
+    free(current_asm.tag_str.str);                                                                                  \
+    if (on_write) {                                                                                                 \
+    asm_err_t error = {.errnum = TP, .nln = nln, .str = fldata.prsdbffr[nln].str, .flnm = asm_data_ptr->inpfl_nm};  \
+    return error; \
+    } \
+    else { \
+        continue; \
+    }
 
 //----------------------------------------------------------------------------------------------------------------
 
-struct current_asm_t {
+int parse_line(filedata fldata, int nln, current_asm_t* current_asm);
 
-    char *cmd_str_ptr = {}, *arg_str_ptr = {}, *tag_str_ptr = {};
-    string cmd_str = {}, arg_str = {}, tag_str = {};
-    int cmd_str_def_len = 0, arg_str_def_len = 0, tag_str_def_len = 0;
-
-};
-
-
-int parse_line(filedata fldata, int nln, current_asm_t* current_asm_t);
+//----------------------------------------------------------------------------------------------------------------
 
 asm_err_t compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr) {
 
-    for (int nln = 0; nln < fldata.nlns; nln++) {
+
+    current_asm_t current_asm = {};
+    int nln = 0;
+    for (nln = 0; nln < fldata.nlns; nln++) {
 
         //$s(fldata.prsdbffr[nln].str);
         if (is_onlyspace(fldata.prsdbffr[nln])) {
@@ -193,19 +230,9 @@ asm_err_t compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr
             continue;
         }
 
-        current_asm_t current_asm_t = {};
+        parse_line(fldata, nln, &current_asm);
 
-        parse_line(fldata, nln, &current_asm_t);
-
-        // $s(cmd_str.str);
-        // $d(cmd_str.len);
-        // $s(arg_str.str);
-        // $d(arg_str.len);
-        // $s(tag_str.str);
-        // $d(tag_str.len);
-
-
-        int cmd_n_rd = cmd_def(current_asm_t.cmd_str);
+        int cmd_n_rd = cmd_def(current_asm.cmd_str);
 
         if (cmd_n_rd == CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT) {
 
@@ -213,9 +240,11 @@ asm_err_t compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr
         }
 
         double arg_rd = NAN;
-        int arg_def_ret = arg_def(current_asm_t.arg_str, &arg_rd);
+        int arg_def_ret = arg_def(current_asm.arg_str, &arg_rd);
 
         if (cmd_n_rd == -1) { //: 7
+
+            // $;
 
             if (arg_def_ret){
 
@@ -227,7 +256,8 @@ asm_err_t compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr
                 ON_RETURN(asm_err_MISS_TAG);
             }
 
-            if (!is_onlyspace({.str = fldata.prsdbffr[nln].str + current_asm_t.cmd_str_def_len + current_asm_t.arg_str_def_len, .len = fldata.prsdbffr[nln].len - current_asm_t.cmd_str_def_len - current_asm_t.arg_str_def_len})) {
+            if (!is_onlyspace({.str = fldata.prsdbffr[nln].str + current_asm.cmd_str_def_len + current_asm.arg_str_def_len, \
+                               .len = fldata.prsdbffr[nln].len - current_asm.cmd_str_def_len - current_asm.arg_str_def_len})) {
 
                 ON_RETURN(asm_err_ARG_QTY_EXC);
             }
@@ -238,9 +268,9 @@ asm_err_t compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr
             }
             //МЕТКА УСТАНАВЛИВАЕТСЯ НА ЗНАЧЕНИЕ ПС, СЛЕДУЮЩЕЕ ПОСЛЕ МЕТКИ
 
-            $lg(arg_rd);
-
-            asm_data_ptr->tag_buf[(int) arg_rd] = (int) asm_data_ptr->code_buf.sz;
+            // $lg(arg_rd);
+            // $d((int) asm_data_ptr->code_buf.sz);
+            asm_data_ptr->tag_buf[(int) arg_rd] = (int) asm_data_ptr->code_buf.sz - asm_data_ptr->code_buf_sz;
 
             CONTINUE_CICL;
         }
@@ -255,7 +285,7 @@ asm_err_t compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr
             if (arg_def_ret == -1) { //значит тут метка JUMP : 7
 
                 double tag_rd = NAN;
-                int tag_def_ret = arg_def(current_asm_t.tag_str, &tag_rd);
+                int tag_def_ret = arg_def(current_asm.tag_str, &tag_rd);
 
                 if (tag_def_ret) {
 
@@ -268,21 +298,21 @@ asm_err_t compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr
                 }
 
 
-                if (!is_onlyspace({.str = fldata.prsdbffr[nln].str + current_asm_t.cmd_str_def_len + current_asm_t.arg_str_def_len + current_asm_t.tag_str_def_len, \
-                                   .len = fldata.prsdbffr[nln].len - current_asm_t.cmd_str_def_len - current_asm_t.arg_str_def_len - current_asm_t.tag_str_def_len})) {
+                if (!is_onlyspace({.str = fldata.prsdbffr[nln].str + current_asm.cmd_str_def_len + current_asm.arg_str_def_len + current_asm.tag_str_def_len,   \
+                                   .len = fldata.prsdbffr[nln].len - current_asm.cmd_str_def_len - current_asm.arg_str_def_len - current_asm.tag_str_def_len})) {
 
                     ON_RETURN(asm_err_ARG_QTY_EXC);
                 }
 
-                if (!on_write && asm_data_ptr->tag_buf[(int) tag_rd] == -1) {
+                if (on_write && asm_data_ptr->tag_buf[(int) tag_rd] == -1) {
+
 
                     ON_RETURN(asm_err_TAG_NO_EXST);
                 }
-                if (on_write) {
 
-                    STACK_PUSH(&asm_data_ptr->code_buf, cmd_n_rd);
-                    STACK_PUSH(&asm_data_ptr->code_buf, asm_data_ptr->tag_buf[(int) tag_rd]);
-                }
+                STACK_PUSH(&asm_data_ptr->code_buf, cmd_n_rd);
+                STACK_PUSH(&asm_data_ptr->code_buf, asm_data_ptr->tag_buf[(int) tag_rd]);
+
                 CONTINUE_CICL;
                 //fprintf(outfl, "%d %d ", cmd_n_rd, (int) (arg_rd * SPU_EXPANENT_COEFF));
             }
@@ -305,16 +335,16 @@ asm_err_t compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr
             }
 
 
-            if (!is_onlyspace({.str = fldata.prsdbffr[nln].str + current_asm_t.cmd_str_def_len + current_asm_t.arg_str_def_len, \
-                               .len = fldata.prsdbffr[nln].len - current_asm_t.cmd_str_def_len - current_asm_t.arg_str_def_len})) {
+            if (!is_onlyspace({.str = fldata.prsdbffr[nln].str + current_asm.cmd_str_def_len + current_asm.arg_str_def_len, \
+                               .len = fldata.prsdbffr[nln].len - current_asm.cmd_str_def_len - current_asm.arg_str_def_len})) {
 
                 ON_RETURN(asm_err_ARG_QTY_EXC);
             }
 
-            if (on_write) {
-                STACK_PUSH(&asm_data_ptr->code_buf, cmd_n_rd);
-                STACK_PUSH(&asm_data_ptr->code_buf, (int) (arg_rd * SPU_EXPANENT_COEFF));
-            }
+
+            STACK_PUSH(&asm_data_ptr->code_buf, cmd_n_rd);
+            STACK_PUSH(&asm_data_ptr->code_buf, (int) (arg_rd * SPU_EXPANENT_COEFF));
+
 
             CONTINUE_CICL;
             //fprintf(outfl, "%d %d ", cmd_n_rd, (int) (arg_rd * SPU_EXPANENT_COEFF));
@@ -326,37 +356,73 @@ asm_err_t compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr
                 ON_RETURN(asm_err_ARG_QTY_EXC);
             }
 
-            if (on_write) {
 
-                STACK_PUSH(&asm_data_ptr->code_buf, cmd_n_rd);
-            }
+            STACK_PUSH(&asm_data_ptr->code_buf, cmd_n_rd);
+
 
             // fprintf(outfl, "%d ", cmd_n_rd);
         }
 
-        free(current_asm_t.cmd_str.str);
-        free(current_asm_t.arg_str.str);
-        free(current_asm_t.tag_str.str);
+        free(current_asm.cmd_str.str);
+        free(current_asm.arg_str.str);
+        free(current_asm.tag_str.str);
     }
 
-    return asm_err_NO_ERR;
+    asm_err_t error = {.errnum = asm_err_NO_ERR};
+    return error;
 }
 
 
-int parse_line(filedata fldata, int nln, current_asm_t* current_asm_t) {
+int parse_line(filedata fldata, int nln, current_asm_t* current_asm) {
 
-    sscanf(fldata.prsdbffr[nln].str, "%ms%n", &current_asm_t->cmd_str.str, &current_asm_t->cmd_str_def_len);
-    sscanf(fldata.prsdbffr[nln].str + current_asm_t->cmd_str_def_len, "%ms%n", &current_asm_t->arg_str.str, &current_asm_t->arg_str_def_len);
-    sscanf(fldata.prsdbffr[nln].str + current_asm_t->cmd_str_def_len + current_asm_t->arg_str_def_len, "%ms%n", &current_asm_t->tag_str.str, &current_asm_t->tag_str_def_len);
+    sscanf(fldata.prsdbffr[nln].str, "%ms%n", &current_asm->cmd_str.str, &current_asm->cmd_str_def_len);
+    // $s(fldata.prsdbffr[nln].str + current_asm->cmd_str_def_len);
+    sscanf(fldata.prsdbffr[nln].str + current_asm->cmd_str_def_len, "%ms%n", &current_asm->arg_str.str, &current_asm->arg_str_def_len);
+//     if (current_asm->arg_str.str == NULL) {
+//
+//         $;
+//     }
+    // $s(current_asm->arg_str.str);
+    sscanf(fldata.prsdbffr[nln].str + current_asm->cmd_str_def_len + current_asm->arg_str_def_len, "%ms%n", &current_asm->tag_str.str, &current_asm->tag_str_def_len);
+//
+//     for (int i = 0; i < fldata.prsdbffr[nln].len; i++) {
+//
+//         $d((int) fldata.prsdbffr[nln].str[i]);
+//         // putc('\n', stderr);
+//         // $d((int) fldata.prsdbffr[nln].str[i]);
+//     }
 
-    skipn_spaces(fldata.prsdbffr[nln].str, (const char**) &current_asm_t->cmd_str_ptr , current_asm_t->cmd_str_def_len);
-    skipn_spaces(fldata.prsdbffr[nln].str + current_asm_t->cmd_str_def_len, (const char**) &current_asm_t->arg_str_ptr , current_asm_t->arg_str_def_len);
-    skipn_spaces(fldata.prsdbffr[nln].str + current_asm_t->cmd_str_def_len + current_asm_t->arg_str_def_len, (const char**) &current_asm_t->tag_str_ptr, current_asm_t->tag_str_def_len);
+    // $s(fldata.prsdbffr[nln].str);
+    // $d(current_asm->cmd_str_def_len);
+    // $d(current_asm->arg_str_def_len);
+    // $s(fldata.prsdbffr[nln].str + current_asm->cmd_str_def_len + current_asm->arg_str_def_len);
+    // $err("------------------------------- \n");
+
+//
+//     $s(fldata.prsdbffr[nln].str);
+//     $d(current_asm->cmd_str_def_len);
+//     $d(current_asm->tag_str_def_len);
+//     $d(current_asm->tag_str_def_len);
+//     $err("\n");
 
 
-    current_asm_t->tag_str.len = current_asm_t->tag_str_def_len - (int) (current_asm_t->tag_str_ptr - fldata.prsdbffr[nln].str - current_asm_t->cmd_str_def_len - current_asm_t->arg_str_def_len - 1);
-    current_asm_t->arg_str.len = current_asm_t->arg_str_def_len - (int) (current_asm_t->arg_str_ptr - fldata.prsdbffr[nln].str - current_asm_t->cmd_str_def_len - 1);
-    current_asm_t->cmd_str.len = current_asm_t->cmd_str_def_len - (int) (current_asm_t->cmd_str_ptr - fldata.prsdbffr[nln].str - 1);
+
+    skipn_spaces(fldata.prsdbffr[nln].str, (const char**) &current_asm->cmd_str_ptr , current_asm->cmd_str_def_len);
+
+    if (current_asm->arg_str.str != NULL) {
+
+        skipn_spaces(fldata.prsdbffr[nln].str + current_asm->cmd_str_def_len, (const char**) &current_asm->arg_str_ptr , current_asm->arg_str_def_len);
+    }
+
+    if (current_asm->tag_str.str != NULL) {
+
+        skipn_spaces(fldata.prsdbffr[nln].str + current_asm->cmd_str_def_len + current_asm->arg_str_def_len, (const char**) &current_asm->tag_str_ptr, current_asm->tag_str_def_len);
+    }
+    // $;
+
+    current_asm->tag_str.len = current_asm->tag_str_def_len - (int) (current_asm->tag_str_ptr - fldata.prsdbffr[nln].str - current_asm->cmd_str_def_len - current_asm->arg_str_def_len - 1);
+    current_asm->arg_str.len = current_asm->arg_str_def_len - (int) (current_asm->arg_str_ptr - fldata.prsdbffr[nln].str - current_asm->cmd_str_def_len - 1);
+    current_asm->cmd_str.len = current_asm->cmd_str_def_len - (int) (current_asm->cmd_str_ptr - fldata.prsdbffr[nln].str - 1);
 
     return 0;
 }
@@ -421,9 +487,9 @@ arg_def_ret_t arg_def(string arg_str, double* arg_rd) {
 
 int return_data(asm_data_t asm_data) {
 
-    fwrite(asm_data.code_buf.bffr, sizeof(int), asm_data.code_buf.cpty, asm_data.bin_fl);
+    fwrite(asm_data.code_buf.bffr + asm_data.code_buf_sz, sizeof(int), asm_data.code_buf_sz, asm_data.bin_fl);
 
-    for (size_t pc = 0; pc < asm_data.code_buf.sz; pc++) {
+    for (size_t pc = asm_data.code_buf_sz; pc < asm_data.code_buf.sz; pc++) {
 
         fprintf(asm_data.asm_lst_fl, "%d ", asm_data.code_buf.bffr[pc]);
     }
