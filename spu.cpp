@@ -6,6 +6,8 @@
 
 #define LOGFL stderr
 
+#define CMD_BUF_LEN 32
+
 #undef ERRLOG
 #define ERRLOG(FRMT, ...) fprintf(LOGFL, FRMT, ##__VA_ARGS__)
 
@@ -393,7 +395,7 @@ int spu_pushr(spu_t* spu_t) {
 
     spu_t->pc ++;
 
-    STACK_PUSH(&spu_t->stk, spu_t->regbuf[spu_t->cmdbuf[spu_t->pc]]);
+    STACK_PUSH(&spu_t->stk, spu_t->regbuf[spu_t->cmdbuf[spu_t->pc] / 1000]);
 
     spu_t->pc ++;
 
@@ -405,7 +407,7 @@ int spu_pushr(spu_t* spu_t) {
 int spu_popr(spu_t* spu_t) {
 
     spu_t->pc ++;
-    STACK_POP(&spu_t->stk, &spu_t->regbuf[spu_t->cmdbuf[spu_t->pc]]);
+    STACK_POP(&spu_t->stk, &spu_t->regbuf[spu_t->cmdbuf[spu_t->pc] / 1000]);
 
     spu_t->pc ++;
 
@@ -435,7 +437,7 @@ int main(int argc, char** argv) {
 
     while (!spu_t.onbreak) {
 
-        spu_dump(spu_t, __FILE__, __LINE__);
+        // spu_dump(spu_t, __FILE__, __LINE__);
         cmd_opfnc_t [spu_t.cmdbuf[spu_t.pc]] (&spu_t);
     }
 
@@ -462,32 +464,46 @@ void spu_dump(spu_t spu_t, str_t __file, int __line) {
 
     ERRLOG("Command list:\n\n");
 
-    for (int i = 0; i < spu_t.cmdbuflen; i++) {
+    int portlen = 20;
 
-        if (i == spu_t.pc) ERRLOG(FAT YELLOW);
+    for (int p = 0; p < spu_t.cmdbuflen / portlen + 1; p ++) {
 
-        ERRLOG("%10d", i);
-        ERRLOG(DEF);
+        for (int i = p * portlen; i < portlen * (p + 1); i++) {
+
+            if (i == spu_t.pc) ERRLOG(FAT YELLOW);
+
+            if (i > spu_t.cmdbuflen) ERRLOG(BLACK);
+
+            ERRLOG(FAT "%9d", i);
+            ERRLOG(DEF);
+        }
+
+        ERRLOG("\n");
+
+        for (int i = p * portlen; i < portlen * (p + 1); i++) {
+
+            if (i == spu_t.pc) ERRLOG(FAT YELLOW);
+
+            if (i > spu_t.cmdbuflen) ERRLOG(BLACK);
+
+            ERRLOG("%9d", spu_t.cmdbuf[i]);
+            ERRLOG(DEF);
+        }
+
+        ERRLOG("\n");
+
+        if (spu_t.pc >= p * portlen && spu_t.pc < (p + 1) * portlen) {
+
+            for (int i = 0; i < spu_t.pc % portlen + 1; i++) {
+
+                ERRLOG("%9s", "");
+            }
+
+            ERRLOG(YELLOW FAT "^\n" DEF);
+        }
+
+        ERRLOG("\n");
     }
-
-    ERRLOG("\n");
-
-    for (int i = 0; i < spu_t.cmdbuflen; i++) {
-
-        if (i == spu_t.pc) ERRLOG(FAT YELLOW);
-
-        ERRLOG("%10d", spu_t.cmdbuf[i]);
-        ERRLOG(DEF);
-    }
-
-    ERRLOG("\n");
-
-    for (int i = 0; i < spu_t.pc + 1; i++) {
-
-        ERRLOG("%10s", "");
-    }
-
-    ERRLOG(YELLOW FAT "^\n" DEF);
 
     ERRLOG("\n");
     ERRLOG(FORMAT_LINE);
@@ -559,11 +575,11 @@ void spu_t_ctor(spu_t* spu_t, int argc, char** argv) {
     $p(spu_t->cmdbuf);
     fread(spu_t->cmdbuf, sizeof(int), MAX_CMD_QTY, cmd_list_fl);
 
-    $ad(spu_t->cmdbuf, 20);
+    // $ad(spu_t->cmdbuf, 40);
 
     fclose(cmd_list_fl);
 
-    spu_t->cmdbuflen = 10;
+    spu_t->cmdbuflen = CMD_BUF_LEN;
     spu_t->pc = 0;
     spu_t->onbreak = (cmd_err) 0;
 }

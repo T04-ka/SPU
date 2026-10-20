@@ -71,7 +71,6 @@ struct current_asm_t {
     char *cmd_str_ptr = {}, *arg_str_ptr = {}, *tag_str_ptr = {};
     string cmd_str = {}, arg_str = {}, tag_str = {};
     int cmd_str_def_len = 0, arg_str_def_len = 0, tag_str_def_len = 0;
-
 };
 
 struct asm_err_t {
@@ -167,6 +166,19 @@ bool is_onlyspace(string str) {
 
 //----------------------------------------------------------------------------------------------------------------
 
+
+//MENTORSKAYA MUDROST
+//  счтал токен - скипнул нахуй (передвинул указатель дальше)
+//  всё
+//
+//
+
+
+
+
+
+
+
 /// Skips no more then n first spaces, or until '\0' is found
 /// If all symbols are spaces, return 0, else return 1 and put in "str_ptr" the pointer on first non-space symbol.
 int skipn_spaces(const char* str, const char** str_ptr, int n) {
@@ -204,10 +216,10 @@ int skipn_spaces(const char* str, const char** str_ptr, int n) {
     free(current_asm.tag_str.str);                                                                                  \
     if (on_write) {                                                                                                 \
     asm_err_t error = {.errnum = TP, .nln = nln, .str = fldata.prsdbffr[nln].str, .flnm = asm_data_ptr->inpfl_nm};  \
-    return error; \
-    } \
-    else { \
-        continue; \
+    return error;                                                                                                   \
+    }                                                                                                               \
+    else {                                                                                                          \
+        continue;                                                                                                   \
     }
 
 //----------------------------------------------------------------------------------------------------------------
@@ -275,7 +287,7 @@ asm_err_t compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr
             CONTINUE_CICL;
         }
 
-         if (arg_def_ret == 1) {
+         if (arg_def_ret == arg_def_ret_WRONG_ARG) {
 
              ON_RETURN(asm_err_WRONG_ARG);
          }
@@ -304,8 +316,9 @@ asm_err_t compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr
                     ON_RETURN(asm_err_ARG_QTY_EXC);
                 }
 
-                if (on_write && asm_data_ptr->tag_buf[(int) tag_rd] == -1) {
+                // TODO: обернуть проверки в функции и разбить эту дуру на много функций
 
+                if (on_write && asm_data_ptr->tag_buf[(int) tag_rd] == -1) {
 
                     ON_RETURN(asm_err_TAG_NO_EXST);
                 }
@@ -356,9 +369,7 @@ asm_err_t compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr
                 ON_RETURN(asm_err_ARG_QTY_EXC);
             }
 
-
             STACK_PUSH(&asm_data_ptr->code_buf, cmd_n_rd);
-
 
             // fprintf(outfl, "%d ", cmd_n_rd);
         }
