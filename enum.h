@@ -9,6 +9,8 @@
 
 enum cmd_n
 {
+    cmd_n_ERROR = -2,
+    cmd_n_LABEL = -1,
     cmd_n_HALT = 0,
     cmd_n_PUSH = 1,
     cmd_n_ADD = 2,
@@ -27,16 +29,18 @@ enum cmd_n
     cmd_n_RET = 15,
     cmd_n_PUSHR = 16,
     cmd_n_POPR = 17,
+    // cmd_n_PUSHM = 18,
+    // cmd_n_POPM = 19,
 };
 
-const int CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT = 18;
+const int CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT = 20;
 
 struct cmd_t
 {
     str_t   name;
     cmd_n   num;
     int     argqty;
-    bool    tag;
+    bool    label;
 };
 
 

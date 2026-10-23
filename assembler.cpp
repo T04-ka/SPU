@@ -15,7 +15,7 @@
 //----------------------------------------------------------------------------------------------------------------
 
 #define CALC_EXPANENT_COEFF 1000
-#define MAX_TAG_QTY 1000
+#define MAX_LABEL_QTY 1000
 
 //----------------------------------------------------------------------------------------------------------------
 
@@ -57,9 +57,20 @@ enum arg_def_ret_t
 
 struct asm_data_t
 {
-    stack_t     code_buf;
-    int         code_buf_sz;
-    int*        tag_buf;
+    int         number_of_cmnds;
+    int         pc;
+    int*        label_buf;
+    bool        on_write;
+    filedata    inp_file_data;
+
+    FILE*       inp_fl;
+    FILE*       asm_lst_fl;
+    FILE*       bin_fl;
+    str_t       inpfl_nm, asm_lst_fl_nm, bin_fl_nm;
+};
+
+struct asm_io_t
+{
     FILE*       inp_fl;
     FILE*       asm_lst_fl;
     FILE*       bin_fl;
@@ -90,13 +101,14 @@ bool is_onlyspace(string str);
 /// If all n symbols are spaces, return 0, else return 1 and put in "str_ptr" the pointer on first non-space symbol.
 int skipn_spaces(const char* str, const char** str_ptr, int n);
 
-asm_err_t compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr);
-
-int cmd_def(string cmd_str);
-
-arg_def_ret_t arg_def(string arg_str, double* arg_rd);
-
-int return_data(asm_data_t asm_data);
+int compile(asm_data_t* asm_data_ptr);
+// asm_err_t compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr);
+//
+// int cmd_def(string cmd_str);
+//
+// arg_def_ret_t arg_def(string arg_str, double* arg_rd);
+//
+// int return_data(asm_data_t asm_data);
 
 int asm_data_ctor(asm_data_t* asm_data_ptr);
 
@@ -104,39 +116,42 @@ int asm_data_dtor(asm_data_t* asm_data_ptr);
 
 //----------------------------------------------------------------------------------------------------------------
 
+#define WRITE_LABEL_LIST    false
+#define WRITE_DATA_IN_FILE  true
+
 int main(int argc, char** argv) {
 
-    asm_data_t asm_fl_data = {.inpfl_nm = argv[1], .asm_lst_fl_nm = "asmlist.txt", .bin_fl_nm = "code.bin"};
-    asm_data_ctor(&asm_fl_data);
+    asm_data_t asm_data = {.inpfl_nm = argv[1], .asm_lst_fl_nm = "asmlist.txt", .bin_fl_nm = "code.bin"};
+    asm_data_ctor(&asm_data);
 
-    if (asm_fl_data.inp_fl == NULL) {
+    if (asm_data.inp_fl == NULL) {
 
         fprintf(stderr, "No such file.\n");
-        asm_data_dtor(&asm_fl_data);
+        asm_data_dtor(&asm_data);
         return 1;
     }
 
-    filedata fldata = {.fl = asm_fl_data.inp_fl};
-    rdfrmfl(&fldata);
+    asm_data.on_write = WRITE_LABEL_LIST;
+    int compile_ok = compile(&asm_data);
 
-    asm_err_t compile_ok = compile_lines(false, fldata, &asm_fl_data);
+    $ad(asm_data.label_buf, 10);
 
-    $ad(asm_fl_data.tag_buf, 10);
+    if (!compile_ok) {
 
-    if (!compile_ok.errnum) {
-
-        asm_fl_data.code_buf_sz = asm_fl_data.code_buf.sz;
-        compile_lines(true, fldata, &asm_fl_data);
+        // asm_data.code_buf_sz = asm_data.pc;
+        asm_data.pc = 0;
+        asm_data.on_write = WRITE_DATA_IN_FILE;
+        compile(&asm_data);
     }
     else {
 
-        errlog(compile_ok);
+        $err(FAT RED "Error\n" DEF);
+        // errlog(compile_ok);
     }
-    $ad(asm_fl_data.tag_buf, 10);
-    return_data(asm_fl_data);
 
-    asm_data_dtor(&asm_fl_data);
-    filedatastrdestr(&fldata); //YASHA YEBANIY PIDOR DOLBOEB, NE UMEET CHITAT` SLOVA NA ANGLIYSKOM
+    $ad(asm_data.label_buf, 10);
+
+    asm_data_dtor(&asm_data);
 
     return 0;
 }
@@ -173,12 +188,6 @@ bool is_onlyspace(string str) {
 //
 //
 
-
-
-
-
-
-
 /// Skips no more then n first spaces, or until '\0' is found
 /// If all symbols are spaces, return 0, else return 1 and put in "str_ptr" the pointer on first non-space symbol.
 int skipn_spaces(const char* str, const char** str_ptr, int n) {
@@ -188,7 +197,6 @@ int skipn_spaces(const char* str, const char** str_ptr, int n) {
     // $d(n);
     for (i = 0; i < n && str[i] == ' ' && str[i] != '\0' && str[i] != EOF; i++) {
 
-        // $c(str[i]);
     }
 
     if (i < n && str[i] != '\0' && str[i] != EOF) {
@@ -206,28 +214,271 @@ int skipn_spaces(const char* str, const char** str_ptr, int n) {
 
 //----------------------------------------------------------------------------------------------------------------
 
-//TODO: указатели
-//TODO: писать данные в массив
-#define CONTINUE_CICL  free(current_asm.cmd_str.str); free(current_asm.arg_str.str); free(current_asm.tag_str.str); continue;
+// //TODO: указатели
+// //TODO: писать данные в массив
+// #define CONTINUE_CICL  free(current_asm.cmd_str.str); free(current_asm.arg_str.str); free(current_asm.tag_str.str); continue;
+//
+// #define ON_RETURN(TP)                                                                                               \
+//     free(current_asm.cmd_str.str);                                                                                  \
+//     free(current_asm.arg_str.str);                                                                                  \
+//     free(current_asm.tag_str.str);                                                                                  \
+//     if (on_write) {                                                                                                 \
+//     asm_err_t error = {.errnum = TP, .nln = nln, .str = fldata.prsdbffr[nln].str, .flnm = asm_data_ptr->inpfl_nm};  \
+//     return error;                                                                                                   \
+//     }                                                                                                               \
+//     else {                                                                                                          \
+//         continue;                                                                                                   \
+//     }
+//
+// //----------------------------------------------------------------------------------------------------------------
+//
+// int parse_line(filedata fldata, int nln, current_asm_t* current_asm);
 
-#define ON_RETURN(TP)                                                                                               \
-    free(current_asm.cmd_str.str);                                                                                  \
-    free(current_asm.arg_str.str);                                                                                  \
-    free(current_asm.tag_str.str);                                                                                  \
-    if (on_write) {                                                                                                 \
-    asm_err_t error = {.errnum = TP, .nln = nln, .str = fldata.prsdbffr[nln].str, .flnm = asm_data_ptr->inpfl_nm};  \
-    return error;                                                                                                   \
-    }                                                                                                               \
-    else {                                                                                                          \
-        continue;                                                                                                   \
+//----------------------------------------------------------------------------------------------------------------
+
+int read_one_command(char** current_str_ptr);
+cmd_n command_handle(asm_data_t* asm_data_ptr, char** current_str_ptr);
+int string_pointer_shift(char** current_str_ptr, int n_chr_shft);
+int command_as_label_handle(asm_data_t* asm_data_ptr, char** current_str_ptr);
+int argument_as_label_handle(asm_data_t* asm_data_ptr, char** current_str_ptr);
+int default_argument_handle(asm_data_t* asm_data_ptr, char** current_str_ptr);
+int write_command(asm_data_t* asm_data_ptr, int argument, bool is_command);
+
+#define ERROR   1
+#define NOERROR 0
+
+#define RETURN_IF_END_EMPTY if (!is_onlyspace({.str = current_str, .len = (int) strlen(current_str)})) return ERROR; else continue;
+
+int compile(asm_data_t* asm_data_ptr) {
+
+    int nln = 0;
+    // $d(asm_data_ptr->inp_file_data.nlns);
+    for (nln = 0; nln < asm_data_ptr->inp_file_data.nlns; nln++) {
+        $std("\n");
+        $d(asm_data_ptr->pc);
+
+        char* current_str = asm_data_ptr->inp_file_data.prsdbffr[nln].str;
+        // $s(current_str);
+        int command_number = command_handle(asm_data_ptr, &current_str); // передавать это в хандлеры
+        $d(command_number);
+
+        if (command_number == cmd_n_ERROR) {
+
+            return ERROR;
+        }
+
+        if (command_number == cmd_n_LABEL) {
+
+            if (command_as_label_handle(asm_data_ptr, &current_str)) return ERROR;
+            RETURN_IF_END_EMPTY;
+        }
+
+        if (cmd_l[command_number].label) {
+
+            if (argument_as_label_handle(asm_data_ptr, &current_str)) return ERROR;
+        }
+        // $;
+        if (cmd_l[command_number].argqty > 0) {
+            $;
+            if (default_argument_handle(asm_data_ptr, &current_str)) return ERROR;
+        }
+
+        RETURN_IF_END_EMPTY;
     }
 
+    return NOERROR;
+}
+
 //----------------------------------------------------------------------------------------------------------------
 
-int parse_line(filedata fldata, int nln, current_asm_t* current_asm);
+#define CMD     true
+#define NONCMD  false
+#define PC_INCR asm_data_ptr->pc++;
 
 //----------------------------------------------------------------------------------------------------------------
 
+cmd_n command_handle(asm_data_t* asm_data_ptr, char** current_str_ptr) {
+
+    int number_of_characters_read = read_one_command(current_str_ptr);
+    // $d(number_of_characters_read);
+    if (*current_str_ptr[0] == ':') {
+
+        string_pointer_shift(current_str_ptr, 1);
+        return cmd_n_LABEL;
+    }
+
+    int command_number_read = 0;
+
+    for (command_number_read = 0;                                                           \
+        command_number_read < CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT  \
+        && strncmp(*current_str_ptr, cmd_l[command_number_read].name, number_of_characters_read);                       \
+        command_number_read++) {}
+
+    string_pointer_shift(current_str_ptr, number_of_characters_read);
+
+    if (command_number_read == CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT) {
+
+        return cmd_n_ERROR;
+    }
+
+    PC_INCR;
+    asm_data_ptr->number_of_cmnds ++;
+    write_command(asm_data_ptr, cmd_l[command_number_read].num, CMD);
+    return cmd_l[command_number_read].num;
+}
+
+//----------------------------------------------------------------------------------------------------------------
+
+int command_as_label_handle(asm_data_t* asm_data_ptr, char** current_str_ptr) {
+
+    int number_of_characters_read = read_one_command(current_str_ptr);
+
+    int label_number = -1;
+    sscanf(*current_str_ptr, "%d", &label_number);
+    string_pointer_shift(current_str_ptr, number_of_characters_read);
+
+    if (asm_data_ptr->on_write) {
+
+        return 0;
+    }
+
+    if (label_number == -1) {
+
+        return 1; //WRONG LABEL NAME
+    }
+
+    if (asm_data_ptr->label_buf[label_number] != -1) {
+
+        return 1; //REDEFINITION OF LABEL
+    }
+
+    asm_data_ptr->label_buf[label_number] = asm_data_ptr->pc;
+
+    return 0;
+}
+
+//----------------------------------------------------------------------------------------------------------------
+
+int argument_as_label_handle(asm_data_t* asm_data_ptr, char** current_str_ptr) {
+
+    int number_of_characters_read = read_one_command(current_str_ptr);
+
+    if (*current_str_ptr[0] != ':') {
+
+        return 1; //MISS A LABEL
+    }
+
+    string_pointer_shift(current_str_ptr, 1);
+    number_of_characters_read--;
+
+    if (number_of_characters_read == 0) {
+
+        number_of_characters_read = read_one_command(current_str_ptr);
+    }
+
+    int label_number = -1;
+    sscanf(*current_str_ptr, "%d", &label_number);
+    string_pointer_shift(current_str_ptr, number_of_characters_read);
+
+    if (label_number == -1) {
+
+        return 1; //WRONG LABEL NAME
+    }
+
+    if (!asm_data_ptr->on_write) { // NO CHECK LABEL IF LABEL ARR NOT WRITTEN (FIRST CODE ASM)
+
+        PC_INCR;
+        return 0;
+    }
+
+    if (asm_data_ptr->label_buf[label_number] == -1) {
+
+        return 1; //NO SUCH LABEL
+    }
+
+    PC_INCR;
+    write_command(asm_data_ptr, asm_data_ptr->label_buf[label_number], NONCMD);
+
+    return 0;
+}
+
+//----------------------------------------------------------------------------------------------------------------
+
+int default_argument_handle(asm_data_t* asm_data_ptr, char** current_str_ptr) {
+
+    int number_of_characters_read = read_one_command(current_str_ptr);
+
+    double argument = NAN;
+    sscanf(*current_str_ptr, "%lg", &argument);
+    string_pointer_shift(current_str_ptr, number_of_characters_read);
+
+    if (isnan(argument)) {
+
+        return 1; //WRONG ARGUMENT VALUE
+    }
+
+    int led_to_int_argument = (int) (SPU_EXPANENT_COEFF * argument);
+
+    PC_INCR;
+    write_command(asm_data_ptr, led_to_int_argument, NONCMD);
+
+    return 0;
+
+}
+
+//----------------------------------------------------------------------------------------------------------------
+
+int read_one_command(char** current_str_ptr) {
+
+    skipn_spaces(*current_str_ptr, (const char**) current_str_ptr, (int) strlen(*current_str_ptr));
+
+    int nread = 0;
+    char* useless_str = (char*) calloc(10, sizeof(char));
+
+    sscanf(*current_str_ptr, "%s%n", useless_str, &nread);
+
+    free(useless_str);
+
+    return nread;
+}
+
+//----------------------------------------------------------------------------------------------------------------
+
+int write_command(asm_data_t* asm_data_ptr, int arg, bool is_command) {
+
+    if (!asm_data_ptr->on_write) {
+
+        return 0;
+    }
+
+    if (is_command) {
+
+        char arr_to_write[1] = {(char) arg};
+        fwrite(arr_to_write, sizeof(char), 1, asm_data_ptr->bin_fl);
+
+        fprintf(asm_data_ptr->asm_lst_fl, "\n%d", arg);
+
+        return 0;
+    }
+
+    int arr_to_write[1] = {arg};
+    fwrite(arr_to_write, sizeof(int), 1, asm_data_ptr->bin_fl);
+
+    fprintf(asm_data_ptr->asm_lst_fl, " %d", arg);
+
+    return 0;
+}
+
+//----------------------------------------------------------------------------------------------------------------
+
+int string_pointer_shift(char** current_str_ptr, int n_chr_shft) {
+
+    *current_str_ptr += n_chr_shft;
+    return 0;
+}
+
+//----------------------------------------------------------------------------------------------------------------
+/*
 asm_err_t compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr) {
 
 
@@ -274,7 +525,7 @@ asm_err_t compile_lines(bool on_write, filedata fldata, asm_data_t* asm_data_ptr
                 ON_RETURN(asm_err_ARG_QTY_EXC);
             }
 
-            if ((int) arg_rd > MAX_TAG_QTY) {
+            if ((int) arg_rd > MAX_LABEL_QTY) {
 
                 ON_RETURN(asm_err_TAG_VAL_EXC);
             }
@@ -463,11 +714,24 @@ int cmd_def(string cmd_str) {
 }
 
 //----------------------------------------------------------------------------------------------------------------
-
+//
+// : LABEL - ZAEBIS'
+// JUMP :LABEL - NORM
+// JUMP : LABEL - HUETA
+// СЧИТАЛ КОМАНДУ, ДАЛЬШЕ ИНДЕНТЕФИЦИРОВАЛ (ЕБАТЬ КАКИЕ УМНЫЕ СЛОВА ОН ВКИДЫВАЕТ), ЕСЛИ НУЖЕН АРУМЕНТ, ТО СЧИТЫВАЕМ АРГМЕНТ
+// ЕСЛИ НУЖЕН ЛАБЕЛ ТО СЧИТЫВАЕМ ЛАБЕЛ
+//
+// НА КАЖДОМ ЭТАПЕ СРАЗУ ПОСЛЕ ПРОЧТЕНИЯ ВЫКИНУЛ НАХУЙ
+//
 // nan + ret0 - emoty arg_str, nan + ret1 - wrong arg_str, dbl + ret0 - correct convert
 /// return 0 if arg_str was empty and set arg_rd if double converted correctly, return 1 if was no convert (wrong arg_str)
 /// return -1 if argement is tag
 arg_def_ret_t arg_def(string arg_str, double* arg_rd) {
+
+//     [sas\0]
+//
+//     [:\0]
+//     [:H\0]
 
     int nread = 0;
     // double arg_rd = NAN;
@@ -476,6 +740,13 @@ arg_def_ret_t arg_def(string arg_str, double* arg_rd) {
 
         return arg_def_ret_OK;
     }
+
+
+
+//     if (arg_str.str[0] == ':') {
+//
+//         return arg_def_ret_TAG;
+//     }
 
     if (!strncmp(arg_str.str, ":", (size_t) arg_str.len)) {
 
@@ -509,21 +780,25 @@ int return_data(asm_data_t asm_data) {
 }
 
 //----------------------------------------------------------------------------------------------------------------
+
+*/
+
 //TODO СДЕЛАТЬ ОБРАБТКУ ОШИБОК
 int asm_data_ctor(asm_data_t* asm_data_ptr) {
 
-    STACK_CTOR(asm_data_ptr->code_buf, 4);
+    asm_data_ptr->label_buf = (int*) calloc(MAX_LABEL_QTY, sizeof(int));
 
-    asm_data_ptr->tag_buf = (int*) calloc(MAX_TAG_QTY, sizeof(int));
+    for (int i = 0; i < MAX_LABEL_QTY; i++){
 
-    for (int i = 0; i < MAX_TAG_QTY; i++){
-
-        asm_data_ptr->tag_buf[i] = -1;
+        asm_data_ptr->label_buf[i] = -1;
     }
 
     asm_data_ptr->inp_fl      = fopen(asm_data_ptr->inpfl_nm, "r");
     asm_data_ptr->asm_lst_fl  = fopen(asm_data_ptr->asm_lst_fl_nm, "w");
     asm_data_ptr->bin_fl      = fopen(asm_data_ptr->bin_fl_nm, "wb");
+
+    asm_data_ptr->inp_file_data = {.fl = asm_data_ptr->inp_fl};
+    rdfrmfl(&asm_data_ptr->inp_file_data);
 
     return 0;
 }
@@ -533,9 +808,9 @@ int asm_data_ctor(asm_data_t* asm_data_ptr) {
 //TODO СДЕЛАТЬ ОБРАБТКУ ОШИБОК
 int asm_data_dtor(asm_data_t* asm_data_ptr) {
 
-    STACK_DTOR(asm_data_ptr->code_buf);
+    free(asm_data_ptr->label_buf);
 
-    free(asm_data_ptr->tag_buf);
+    filedatastrdestr(&asm_data_ptr->inp_file_data); //YASHA YEBANIY PIDOR DOLBOEB, NE UMEET CHITAT` SLOVA NA ANGLIYSKOM
 
     fclose(asm_data_ptr->inp_fl);
     fclose(asm_data_ptr->asm_lst_fl);
