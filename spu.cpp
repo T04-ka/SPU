@@ -109,7 +109,8 @@ void cmd_opfnc_t_init() {
     // cmd_opfnc_t[0] = spu_ret;
 }
 
-#define GET_CMD(IND)    * (int*)( (char*) spu_t->cmd_buf + IND )
+#define GET_CMD(IND)    * ( (char*) spu_t->cmd_buf + IND )
+#define GET_ARG(IND)    * (int*)( (char*) spu_t->cmd_buf + IND )
 #define PC_INCR         spu_t->pc += CMDSZ
 
 //----------------------------------------------------------------------------------------------------------------
@@ -124,7 +125,9 @@ int spu_push(spu_t* spu_t) {
 
     PC_INCR;
 
-    int var = GET_CMD(spu_t->pc);
+    $d(( *(int*)((char*) spu_t->cmd_buf + spu_t->pc) ));
+
+    int var = GET_ARG(spu_t->pc);
     STACK_PUSH(&spu_t->stk, var);
 
     spu_t->pc += ARGSZ;
@@ -370,8 +373,9 @@ int main(int argc, char** argv) {
 
     while (!spu_t.onbreak) {
 
+        $d(spu_t.pc);
         // spu_dump(spu_t, __FILE__, __LINE__);
-        cmd_opfnc_t [* (int*)( (char*) spu_t.cmd_buf + spu_t.pc )] (&spu_t);
+        cmd_opfnc_t [* (char*)( (char*) spu_t.cmd_buf + spu_t.pc )] (&spu_t);
     }
 
     spu_err_print(spu_t);
@@ -509,6 +513,7 @@ void spu_t_ctor(spu_t* spu_t, int argc, char** argv) {
 
     fread(signa_arr, 16, 1, cmd_list_fl);
 
+    // $d(*((int*) signa_arr + 3));
     // $ad(spu_t->cmd_buf, 40);
 
     for (int i = 0; i < 8; i++) {
@@ -518,8 +523,8 @@ void spu_t_ctor(spu_t* spu_t, int argc, char** argv) {
 
     $sn;
 
-    spu_t->cmd_qty = *((int*) signa_arr + 2);
-    spu_t->cmd_buf_size = spu_t->cmd_qty * 1 + (*((int*) signa_arr + 3) - spu_t->cmd_qty) * 4;
+    spu_t->cmd_qty = (size_t) *( (char*) signa_arr + 2 * 4 );
+    spu_t->cmd_buf_size = (size_t) *((int*) signa_arr + 3);
 
 
     printf("Number of cmd = %zu\n", spu_t->cmd_qty);
@@ -528,6 +533,9 @@ void spu_t_ctor(spu_t* spu_t, int argc, char** argv) {
     spu_t->cmd_buf = calloc(spu_t->cmd_buf_size, 1);
     fread(spu_t->cmd_buf, 1, spu_t->cmd_buf_size, cmd_list_fl);
 
+    $ad(((char*) spu_t->cmd_buf), spu_t->cmd_buf_size);
+
+    free(signa_arr);
     fclose(cmd_list_fl);
 
     spu_t->pc = 0;

@@ -300,9 +300,9 @@ cmd_n command_handle(asm_data_t* asm_data_ptr, char** current_str_ptr) {
 
     int command_number_read = 0;
 
-    for (command_number_read = 0;                                                           \
-        command_number_read < CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT - 2  \
-        && strncmp(*current_str_ptr, cmd_l[command_number_read].name, number_of_characters_read);                       \
+    for (command_number_read = 0;                                                                   \
+        command_number_read < CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT - 2      \
+        && strncmp(*current_str_ptr, cmd_l[command_number_read].name, number_of_characters_read);   \
         command_number_read++) {}
 
     string_pointer_shift(current_str_ptr, number_of_characters_read);
@@ -378,7 +378,7 @@ asm_err_n argument_as_label_handle(asm_data_t* asm_data_ptr, char** current_str_
 
     if (!asm_data_ptr->on_write) { // NO CHECK LABEL IF LABEL ARR NOT WRITTEN (FIRST CODE ASM)
 
-        PC_INCR;
+        asm_data_ptr->pc += ARGSZ;
         return asm_err_NO_ERR;
     }
 
@@ -387,7 +387,7 @@ asm_err_n argument_as_label_handle(asm_data_t* asm_data_ptr, char** current_str_
         return asm_err_LABEL_NOT_EXST; //NO SUCH LABEL
     }
 
-    PC_INCR;
+    asm_data_ptr->pc += ARGSZ;
     write_command(asm_data_ptr, asm_data_ptr->label_buf[label_number], NONCMD);
 
     return asm_err_NO_ERR;
@@ -410,7 +410,7 @@ asm_err_n default_argument_handle(asm_data_t* asm_data_ptr, char** current_str_p
 
     int led_to_int_argument = (int) (SPU_EXPANENT_COEFF * argument);
 
-    PC_INCR;
+    asm_data_ptr->pc += ARGSZ;
     write_command(asm_data_ptr, led_to_int_argument, NONCMD);
 
     return asm_err_NO_ERR;

@@ -1,9 +1,5 @@
-PUSH  1
+PUSH 1
+PUSH 1
+ADD
 OUT
-JUMP : 1
-:2
 HALT
-: 1
-PUSH 2
-OUT
-JUMP :2 
