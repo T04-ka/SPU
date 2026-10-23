@@ -7,9 +7,7 @@
 
 #include "enum.h"
 
-#include <cassert>
 #include <ctype.h>
-#include <iterator>
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -17,7 +15,6 @@
 //----------------------------------------------------------------------------------------------------------------
 
 #define MAX_LABEL_QTY 1000
-
 //----------------------------------------------------------------------------------------------------------------
 
 enum asm_err_n
@@ -66,21 +63,6 @@ struct asm_data_t
     str_t       inpfl_nm, asm_lst_fl_nm, bin_fl_nm;
 };
 
-struct asm_io_t
-{
-    FILE*       inp_fl;
-    FILE*       asm_lst_fl;
-    FILE*       bin_fl;
-    str_t       inpfl_nm, asm_lst_fl_nm, bin_fl_nm;
-};
-
-struct current_asm_t {
-
-    char *cmd_str_ptr = {}, *arg_str_ptr = {}, *tag_str_ptr = {};
-    string cmd_str = {}, arg_str = {}, tag_str = {};
-    int cmd_str_def_len = 0, arg_str_def_len = 0, tag_str_def_len = 0;
-};
-
 struct asm_err_t {
 
     asm_err_n errnum;
@@ -108,6 +90,8 @@ int write_header(asm_data_t asm_data);
 
 //----------------------------------------------------------------------------------------------------------------
 
+#define FORMAT_LINE "=========================================================================================================\n"
+
 #define WRITE_LABEL_LIST    false
 #define WRITE_DATA_IN_FILE  true
 
@@ -129,6 +113,7 @@ int main(int argc, char** argv) {
     $ad(asm_data.label_buf, 10);
     $d(asm_data.pc);
     $d(asm_data.number_of_cmnds);
+
     if (!compile_ok.errnum) {
 
         write_header(asm_data);
@@ -447,15 +432,19 @@ int write_command(asm_data_t* asm_data_ptr, int arg, bool is_command) {
         char arr_to_write[1] = {(char) arg};
         fwrite(arr_to_write, sizeof(char), 1, asm_data_ptr->bin_fl);
 
-        fprintf(asm_data_ptr->asm_lst_fl, "\n%d", arg);
+        fprintf(asm_data_ptr->asm_lst_fl, "%16s| %8d | %#16.8x | %8s |\n", "", arg, (unsigned) asm_data_ptr->pc, cmd_l[arg].name);
+
 
         return 0;
     }
 
-    int arr_to_write[1] = {arg};
-    fwrite(arr_to_write, sizeof(int), 1, asm_data_ptr->bin_fl);
+    int arr_to_write = arg;
 
-    fprintf(asm_data_ptr->asm_lst_fl, " %d", arg);
+    fwrite(&arr_to_write, sizeof(int), 1, asm_data_ptr->bin_fl);
+
+
+
+    fprintf(asm_data_ptr->asm_lst_fl, "%16s| %8d | %#16.8x | %8s |\n", "", arg, (unsigned) asm_data_ptr->pc, "");
 
     return 0;
 }
@@ -498,6 +487,8 @@ int asm_data_dtor(asm_data_t* asm_data_ptr) {
 
     filedatastrdestr(&asm_data_ptr->inp_file_data); //YASHA YEBANIY PIDOR DOLBOEB, NE UMEET CHITAT` SLOVA NA ANGLIYSKOM
 
+    fprintf(asm_data_ptr->asm_lst_fl, FORMAT_LINE FORMAT_LINE);
+
     fclose(asm_data_ptr->inp_fl);
     fclose(asm_data_ptr->asm_lst_fl);
     fclose(asm_data_ptr->bin_fl);
@@ -506,7 +497,7 @@ int asm_data_dtor(asm_data_t* asm_data_ptr) {
 }
 
 //----------------------------------------------------------------------------------------------------------------
-
+// TODO ебани 50 байт на 32 можно положить начало кода (сука какой же он ебень)
 int write_header(asm_data_t asm_data) {
 
     fwrite(SIGNATURE___TOUCH_ONLY_IF_YOU_DONT_AFRAID_OF_THE_CONSEQUENSES, 8, 1, asm_data.bin_fl);
@@ -514,6 +505,9 @@ int write_header(asm_data_t asm_data) {
     int write_arr[] = {asm_data.number_of_cmnds, asm_data.pc};
 
     fwrite(write_arr, sizeof(int), sizeof(write_arr)/sizeof(int), asm_data.bin_fl);
+
+    fprintf(asm_data.asm_lst_fl, FORMAT_LINE);
+    fprintf(asm_data.asm_lst_fl, FORMAT_LINE);
 
     return 0;
 }

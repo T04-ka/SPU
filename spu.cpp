@@ -1,3 +1,7 @@
+
+// #define DEBUG
+#include <cstring>
+#include <ios>
 #include <stdio.h>
 #include <stdlib.h>
 #include "./../Stack/stack.h"
@@ -110,7 +114,7 @@ void cmd_opfnc_t_init() {
 }
 
 #define GET_CMD(IND)    * ( (char*) spu_t->cmd_buf + IND )
-#define GET_ARG(IND)    * (int*)( (char*) spu_t->cmd_buf + IND )
+#define GET_ARG(IND)    * (unsigned int*)( (char*) spu_t->cmd_buf + IND )
 #define PC_INCR         spu_t->pc += CMDSZ
 
 //----------------------------------------------------------------------------------------------------------------
@@ -124,10 +128,13 @@ int spu_push(spu_t* spu_t) {
 //     }
 
     PC_INCR;
+    // сделать через memcpy
+    $d(( *(unsigned int*)((char*) spu_t->cmd_buf + spu_t->pc) ));
 
-    $d(( *(int*)((char*) spu_t->cmd_buf + spu_t->pc) ));
+    int copied_arg = 0;
+    memcpy(&copied_arg, &GET_ARG(spu_t->pc), 4);
 
-    int var = GET_ARG(spu_t->pc);
+    int var = copied_arg;
     STACK_PUSH(&spu_t->stk, var);
 
     spu_t->pc += ARGSZ;
@@ -226,7 +233,10 @@ int spu_halt(spu_t* spu_t) {
 
 int spu_jump(spu_t* spu_t) {
 
-    spu_t->pc = GET_CMD(spu_t->pc + CMDSZ);
+
+    int copied_arg = 0;
+    memcpy(&copied_arg, &GET_ARG(spu_t->pc + CMDSZ), 4);
+    spu_t->pc = copied_arg;
 
     return 0;
 }
@@ -241,11 +251,14 @@ STACK_POP(&spu_t->stk, &frst_chr);                                      \
                                                                         \
 if (scnd_chr CMP frst_chr) {                                            \
                                                                         \
-    spu_t->pc = GET_CMD(spu_t->pc + CMDSZ);                             \
+                                                                        \
+    int copied_arg = 0;                                                 \
+    memcpy(&copied_arg, &GET_ARG(spu_t->pc + CMDSZ), 4);                \
+    spu_t->pc = copied_arg;                                             \
 }                                                                       \
 else {                                                                  \
                                                                         \
-    PC_INCR;                                                 \
+    PC_INCR;                                                            \
     spu_t->pc += ARGSZ;                                                 \
 }                                                                       \
                                                                         \
@@ -311,7 +324,9 @@ int spu_call(spu_t* spu_t) {
 
     STACK_PUSH(&spu_t->calltree, spu_t->pc + CMDSZ + ARGSZ);
 
-    spu_t->pc = GET_CMD(spu_t->pc + CMDSZ);
+    int copied_arg = 0;
+    memcpy(&copied_arg, &GET_ARG(spu_t->pc + CMDSZ), 4);
+    spu_t->pc = copied_arg;
 
     return 0;
 }
@@ -330,8 +345,10 @@ int spu_ret(spu_t* spu_t) {
 int spu_pushr(spu_t* spu_t) {
 
     PC_INCR;
-
-    STACK_PUSH(&spu_t->stk, spu_t->reg_buf[GET_CMD(spu_t->pc) / SPU_EXPANENT_COEFF]);
+    // $d(GET_ARG(spu_t->pc));
+    int copied_arg = 0;
+    memcpy(&copied_arg, &GET_ARG(spu_t->pc), 4);
+    STACK_PUSH(&spu_t->stk, spu_t->reg_buf[copied_arg / SPU_EXPANENT_COEFF]);
 
     spu_t->pc += ARGSZ;
 
@@ -343,7 +360,10 @@ int spu_pushr(spu_t* spu_t) {
 int spu_popr(spu_t* spu_t) {
 
     PC_INCR;
-    STACK_POP(&spu_t->stk, &spu_t->reg_buf[GET_CMD(spu_t->pc) / SPU_EXPANENT_COEFF]);
+    // $d(GET_ARG(spu_t->pc));
+    int copied_arg = 0;
+    memcpy(&copied_arg, &GET_ARG(spu_t->pc), 4);
+    STACK_POP(&spu_t->stk, &spu_t->reg_buf[copied_arg / SPU_EXPANENT_COEFF]);
 
     spu_t->pc += ARGSZ;
 
@@ -356,7 +376,7 @@ void spu_dump(spu_t spu_t, str_t __file, int __line);
 
 void spu_err_print(spu_t spu_t);
 
-void spu_t_ctor(spu_t* spu_t, int argc, char** argv);
+int spu_t_ctor(spu_t* spu_t, int argc, char** argv);
 
 void spu_t_dtor(spu_t* spu_t);
 
@@ -373,7 +393,7 @@ int main(int argc, char** argv) {
 
     while (!spu_t.onbreak) {
 
-        $d(spu_t.pc);
+        // $d(spu_t.pc);
         // spu_dump(spu_t, __FILE__, __LINE__);
         cmd_opfnc_t [* (char*)( (char*) spu_t.cmd_buf + spu_t.pc )] (&spu_t);
     }
@@ -386,7 +406,7 @@ int main(int argc, char** argv) {
 }
 
 //----------------------------------------------------------------------------------------------------------------
-/*
+
 #undef FORMAT_LINE
 #define FORMAT_LINE "-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n"
 void spu_dump(spu_t spu_t, str_t __file, int __line) {
@@ -394,53 +414,53 @@ void spu_dump(spu_t spu_t, str_t __file, int __line) {
     ERRLOG("\n");
     ERRLOG(FORMAT_LINE);
     ERRLOG("\n");
-
-    ERRLOG("SPU dump was called from " FAT"%s:%d.\n\n" DEF, __file, __line);
-
+//
+//     ERRLOG("SPU dump was called from " FAT"%s:%d.\n\n" DEF, __file, __line);
+//
     $ad(spu_t.reg_buf, 5);
-
-    ERRLOG("Command list:\n\n");
-
-    int portlen = 20;
-
-    for (int p = 0; p < spu_t.cmd_buflen / portlen + 1; p ++) {
-
-        for (int i = p * portlen; i < portlen * (p + 1); i++) {
-
-            if (i == spu_t.pc) ERRLOG(FAT YELLOW);
-
-            if (i > spu_t.cmd_buflen) ERRLOG(BLACK);
-
-            ERRLOG(FAT "%9d", i);
-            ERRLOG(DEF);
-        }
-
-        ERRLOG("\n");
-
-        for (int i = p * portlen; i < portlen * (p + 1); i++) {
-
-            if (i == spu_t.pc) ERRLOG(FAT YELLOW);
-
-            if (i > spu_t.cmd_buflen) ERRLOG(BLACK);
-
-            ERRLOG("%9d", spu_t.cmd_buf[i]);
-            ERRLOG(DEF);
-        }
-
-        ERRLOG("\n");
-
-        if (spu_t.pc >= p * portlen && spu_t.pc < (p + 1) * portlen) {
-
-            for (int i = 0; i < spu_t.pc % portlen + 1; i++) {
-
-                ERRLOG("%9s", "");
-            }
-
-            ERRLOG(YELLOW FAT "^\n" DEF);
-        }
-
-        ERRLOG("\n");
-    }
+//
+//     ERRLOG("Command list:\n\n");
+//
+//     int portlen = 20;
+//
+//     for (int p = 0; p < spu_t.cmd_buflen / portlen + 1; p ++) {
+//
+//         for (int i = p * portlen; i < portlen * (p + 1); i++) {
+//
+//             if (i == spu_t.pc) ERRLOG(FAT YELLOW);
+//
+//             if (i > spu_t.cmd_buflen) ERRLOG(BLACK);
+//
+//             ERRLOG(FAT "%9d", i);
+//             ERRLOG(DEF);
+//         }
+//
+//         ERRLOG("\n");
+//
+//         for (int i = p * portlen; i < portlen * (p + 1); i++) {
+//
+//             if (i == spu_t.pc) ERRLOG(FAT YELLOW);
+//
+//             if (i > spu_t.cmd_buflen) ERRLOG(BLACK);
+//
+//             ERRLOG("%9d", spu_t.cmd_buf[i]);
+//             ERRLOG(DEF);
+//         }
+//
+//         ERRLOG("\n");
+//
+//         if (spu_t.pc >= p * portlen && spu_t.pc < (p + 1) * portlen) {
+//
+//             for (int i = 0; i < spu_t.pc % portlen + 1; i++) {
+//
+//                 ERRLOG("%9s", "");
+//             }
+//
+//             ERRLOG(YELLOW FAT "^\n" DEF);
+//         }
+//
+//         ERRLOG("\n");
+//     }
 
     ERRLOG("\n");
     ERRLOG(FORMAT_LINE);
@@ -451,7 +471,7 @@ void spu_dump(spu_t spu_t, str_t __file, int __line) {
     getchar();
 }
 #undef FORMAT_LINE
-*/
+
 //----------------------------------------------------------------------------------------------------------------
 
 void spu_err_print(spu_t spu_t) {
@@ -494,7 +514,7 @@ void spu_err_print(spu_t spu_t) {
 
 //----------------------------------------------------------------------------------------------------------------
 
-void spu_t_ctor(spu_t* spu_t, int argc, char** argv) {
+int spu_t_ctor(spu_t* spu_t, int argc, char** argv) {
 
     STACK_CTOR(spu_t->stk, 4);
     STACK_CTOR(spu_t->calltree, 4);
@@ -513,22 +533,27 @@ void spu_t_ctor(spu_t* spu_t, int argc, char** argv) {
 
     fread(signa_arr, 16, 1, cmd_list_fl);
 
+    if (*(unsigned long*) signa_arr != *SIGNATURE___TOUCH_ONLY_IF_YOU_DONT_AFRAID_OF_THE_CONSEQUENSES) {
+
+        fprintf(stderr, RED FAT "CHE ZA GOVNO TI MNE PODSUNUL? IDI COMPILIRUI NORMAL'NO. PIDOR.\n" DEF);
+        return 1;
+    }
     // $d(*((int*) signa_arr + 3));
     // $ad(spu_t->cmd_buf, 40);
 
-    for (int i = 0; i < 8; i++) {
-
-        putchar(*((char*) signa_arr + i));
-    }
-
-    $sn;
+//     for (int i = 0; i < 8; i++) {
+//
+//         putchar(*((char*) signa_arr + i));
+//     }
+//
+//     $sn;
 
     spu_t->cmd_qty = (size_t) *( (char*) signa_arr + 2 * 4 );
     spu_t->cmd_buf_size = (size_t) *((int*) signa_arr + 3);
 
 
-    printf("Number of cmd = %zu\n", spu_t->cmd_qty);
-    printf("All = %zu\n", spu_t->cmd_buf_size);
+    // printf("Number of cmd = %zu\n", spu_t->cmd_qty);
+    // printf("All = %zu\n", spu_t->cmd_buf_size);
 
     spu_t->cmd_buf = calloc(spu_t->cmd_buf_size, 1);
     fread(spu_t->cmd_buf, 1, spu_t->cmd_buf_size, cmd_list_fl);
@@ -540,6 +565,8 @@ void spu_t_ctor(spu_t* spu_t, int argc, char** argv) {
 
     spu_t->pc = 0;
     spu_t->onbreak = (cmd_err) 0;
+
+    return 0;
 }
 
 //----------------------------------------------------------------------------------------------------------------
