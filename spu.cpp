@@ -6,8 +6,6 @@
 
 #define LOGFL stderr
 
-#define CMD_BUF_LEN 32
-
 #undef ERRLOG
 #define ERRLOG(FRMT, ...) fprintf(LOGFL, FRMT, ##__VA_ARGS__)
 
@@ -25,12 +23,13 @@ enum cmd_err {
 
 struct spu_t
 {
-    int*        cmdbuf;
-    int         cmdbuflen;
+    void*       cmd_buf;
+    size_t      cmd_buf_size;
+    size_t      cmd_qty;
     int         pc;
     stack_t     stk;
     cmd_err     onbreak;
-    int*        regbuf;
+    int*        reg_buf;
     stack_t     calltree;
 };
 
@@ -78,7 +77,7 @@ typedef int spu_opfnc_t(spu_t* spu_t);
 
 //----------------------------------------------------------------------------------------------------------------
 
-spu_opfnc_t* cmd_opfnc_t [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT] =
+spu_opfnc_t* cmd_opfnc_t [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT - 2] =
 
 // int (*cmd_l[CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT])(spu_t*, stack_t*, cmd_err*) =
     {
@@ -110,22 +109,25 @@ void cmd_opfnc_t_init() {
     // cmd_opfnc_t[0] = spu_ret;
 }
 
+#define GET_CMD(IND)    * (int*)( (char*) spu_t->cmd_buf + IND )
+#define PC_INCR         spu_t->pc += CMDSZ
+
 //----------------------------------------------------------------------------------------------------------------
 
 int spu_push(spu_t* spu_t) {
 
-//     if (spu_t->pc < 0 || spu_t->pc > spu_t->cmdbuflen) {
+//     if (spu_t->pc < 0 || spu_t->pc > spu_t->cmd_buflen) {
 //
 //         spu_t->onbreak = cmd_t_WRONG_PC;
 //         return 1;
 //     }
 
-    spu_t->pc++;
+    PC_INCR;
 
-    int var = spu_t->cmdbuf[spu_t->pc];
+    int var = GET_CMD(spu_t->pc);
     STACK_PUSH(&spu_t->stk, var);
 
-    spu_t->pc++;
+    spu_t->pc += ARGSZ;
 
     return 0;
 }
@@ -134,7 +136,7 @@ int spu_push(spu_t* spu_t) {
 
 int spu_add(spu_t* spu_t) {
 
-    spu_t->pc++;
+    PC_INCR;
 
     int var1 = 0, var2 = 0;
     STACK_POP(&spu_t->stk, &var1);
@@ -148,7 +150,7 @@ int spu_add(spu_t* spu_t) {
 
 int spu_sub(spu_t* spu_t) {
 
-    spu_t->pc++;
+    PC_INCR;
 
     int var1 = 0, var2 = 0;
     STACK_POP(&spu_t->stk, &var1);
@@ -162,7 +164,7 @@ int spu_sub(spu_t* spu_t) {
 
 int spu_out(spu_t* spu_t) {
 
-    spu_t->pc++;
+    PC_INCR;
 
     int var = 0;
     STACK_POP(&spu_t->stk, &var);
@@ -175,7 +177,7 @@ int spu_out(spu_t* spu_t) {
 
 int spu_mul(spu_t* spu_t) {
 
-    spu_t->pc++;
+    PC_INCR;
 
     int var1 = 0, var2 = 0;
     STACK_POP(&spu_t->stk, &var1);
@@ -189,7 +191,7 @@ int spu_mul(spu_t* spu_t) {
 
 int spu_div(spu_t* spu_t) {
 
-    spu_t->pc++;
+    PC_INCR;
 
     int var1 = 0, var2 = 0;
     STACK_POP(&spu_t->stk, &var1);
@@ -201,7 +203,7 @@ int spu_div(spu_t* spu_t) {
     }
     else {
 
-        STACK_PUSH(&spu_t->stk, var2 * 1000 / var1);
+        STACK_PUSH(&spu_t->stk, var2 * SPU_EXPANENT_COEFF / var1);
     }
 
     return 0;
@@ -211,7 +213,7 @@ int spu_div(spu_t* spu_t) {
 
 int spu_halt(spu_t* spu_t) {
 
-    spu_t->pc++;
+    PC_INCR;
     spu_t->onbreak = cmd_t_NORMAL_EXIT;
 
     return 0;
@@ -221,31 +223,36 @@ int spu_halt(spu_t* spu_t) {
 
 int spu_jump(spu_t* spu_t) {
 
-    spu_t->pc = spu_t->cmdbuf [spu_t->pc + 1];
+    spu_t->pc = GET_CMD(spu_t->pc + CMDSZ);
 
     return 0;
 }
 
 //----------------------------------------------------------------------------------------------------------------
 
+#define JUMP_IF(CMP)                                                    \
+int frst_chr = 0, scnd_chr = 0;                                         \
+                                                                        \
+STACK_POP(&spu_t->stk, &scnd_chr);                                      \
+STACK_POP(&spu_t->stk, &frst_chr);                                      \
+                                                                        \
+if (scnd_chr CMP frst_chr) {                                            \
+                                                                        \
+    spu_t->pc = GET_CMD(spu_t->pc + CMDSZ);                             \
+}                                                                       \
+else {                                                                  \
+                                                                        \
+    PC_INCR;                                                 \
+    spu_t->pc += ARGSZ;                                                 \
+}                                                                       \
+                                                                        \
+STACK_PUSH(&spu_t->stk, frst_chr);
+
+
+
 int spu_jump_if_bggr(spu_t* spu_t) {
 
-    int frst_chr = 0, scnd_chr = 0;
-
-    STACK_POP(&spu_t->stk, &scnd_chr);
-    STACK_POP(&spu_t->stk, &frst_chr);
-
-    if (scnd_chr > frst_chr) {
-
-        spu_t->pc = spu_t->cmdbuf [spu_t->pc + 1];
-    }
-    else {
-
-        spu_t->pc ++;
-        spu_t->pc ++;
-    }
-
-    STACK_PUSH(&spu_t->stk, frst_chr);
+    JUMP_IF(>);
 
     return 0;
 }
@@ -254,22 +261,7 @@ int spu_jump_if_bggr(spu_t* spu_t) {
 
 int spu_jump_if_smllr(spu_t* spu_t) {
 
-    int frst_chr = 0, scnd_chr = 0;
-
-    STACK_POP(&spu_t->stk, &scnd_chr);
-    STACK_POP(&spu_t->stk, &frst_chr);
-
-    if (scnd_chr < frst_chr) {
-
-        spu_t->pc = spu_t->cmdbuf [spu_t->pc + 1];
-    }
-    else {
-
-        spu_t->pc ++;
-        spu_t->pc ++;
-    }
-
-    STACK_PUSH(&spu_t->stk, frst_chr);
+    JUMP_IF(<);
 
     return 0;
 }
@@ -278,22 +270,7 @@ int spu_jump_if_smllr(spu_t* spu_t) {
 
 int spu_jump_if_eq(spu_t* spu_t) {
 
-    int frst_chr = 0, scnd_chr = 0;
-
-    STACK_POP(&spu_t->stk, &scnd_chr);
-    STACK_POP(&spu_t->stk, &frst_chr);
-
-    if (scnd_chr == frst_chr) {
-
-        spu_t->pc = spu_t->cmdbuf [spu_t->pc + 1];
-    }
-    else {
-
-        spu_t->pc ++;
-        spu_t->pc ++;
-    }
-
-    STACK_PUSH(&spu_t->stk, frst_chr);
+    JUMP_IF(==);
 
     return 0;
 }
@@ -302,22 +279,7 @@ int spu_jump_if_eq(spu_t* spu_t) {
 
 int spu_jump_if_nbggr(spu_t* spu_t) {
 
-    int frst_chr = 0, scnd_chr = 0;
-
-    STACK_POP(&spu_t->stk, &scnd_chr);
-    STACK_POP(&spu_t->stk, &frst_chr);
-
-    if (scnd_chr <= frst_chr) {
-
-        spu_t->pc = spu_t->cmdbuf [spu_t->pc + 1];
-    }
-    else {
-
-        spu_t->pc ++;
-        spu_t->pc ++;
-    }
-
-    STACK_PUSH(&spu_t->stk, frst_chr);
+    JUMP_IF(<=);
 
     return 0;
 }
@@ -326,22 +288,7 @@ int spu_jump_if_nbggr(spu_t* spu_t) {
 
 int spu_jump_if_nsmllr(spu_t* spu_t) {
 
-    int frst_chr = 0, scnd_chr = 0;
-
-    STACK_POP(&spu_t->stk, &scnd_chr);
-    STACK_POP(&spu_t->stk, &frst_chr);
-
-    if (scnd_chr >= frst_chr) {
-
-        spu_t->pc = spu_t->cmdbuf [spu_t->pc + 1];
-    }
-    else {
-
-        spu_t->pc ++;
-        spu_t->pc ++;
-    }
-
-    STACK_PUSH(&spu_t->stk, frst_chr);
+    JUMP_IF(>=);
 
     return 0;
 }
@@ -350,21 +297,7 @@ int spu_jump_if_nsmllr(spu_t* spu_t) {
 
 int spu_jump_if_neq(spu_t* spu_t) {
 
-    int frst_chr = 0, scnd_chr = 0;
-
-    STACK_POP(&spu_t->stk, &scnd_chr);
-    STACK_POP(&spu_t->stk, &frst_chr);
-
-    if (scnd_chr != frst_chr) {
-
-        spu_t->pc = spu_t->cmdbuf [spu_t->pc + 1];
-    }
-    else {
-
-        spu_t->pc += 2;
-    }
-
-    STACK_PUSH(&spu_t->stk, frst_chr);
+    JUMP_IF(!=);
 
     return 0;
 }
@@ -373,9 +306,9 @@ int spu_jump_if_neq(spu_t* spu_t) {
 
 int spu_call(spu_t* spu_t) {
 
-    STACK_PUSH(&spu_t->calltree, spu_t->pc + 2);
+    STACK_PUSH(&spu_t->calltree, spu_t->pc + CMDSZ + ARGSZ);
 
-    spu_t->pc = spu_t->cmdbuf[spu_t->pc + 1];
+    spu_t->pc = GET_CMD(spu_t->pc + CMDSZ);
 
     return 0;
 }
@@ -393,11 +326,11 @@ int spu_ret(spu_t* spu_t) {
 
 int spu_pushr(spu_t* spu_t) {
 
-    spu_t->pc ++;
+    PC_INCR;
 
-    STACK_PUSH(&spu_t->stk, spu_t->regbuf[spu_t->cmdbuf[spu_t->pc] / 1000]);
+    STACK_PUSH(&spu_t->stk, spu_t->reg_buf[GET_CMD(spu_t->pc) / SPU_EXPANENT_COEFF]);
 
-    spu_t->pc ++;
+    spu_t->pc += ARGSZ;
 
     return 0;
 }
@@ -406,10 +339,10 @@ int spu_pushr(spu_t* spu_t) {
 
 int spu_popr(spu_t* spu_t) {
 
-    spu_t->pc ++;
-    STACK_POP(&spu_t->stk, &spu_t->regbuf[spu_t->cmdbuf[spu_t->pc] / 1000]);
+    PC_INCR;
+    STACK_POP(&spu_t->stk, &spu_t->reg_buf[GET_CMD(spu_t->pc) / SPU_EXPANENT_COEFF]);
 
-    spu_t->pc ++;
+    spu_t->pc += ARGSZ;
 
     return 0;
 }
@@ -438,7 +371,7 @@ int main(int argc, char** argv) {
     while (!spu_t.onbreak) {
 
         // spu_dump(spu_t, __FILE__, __LINE__);
-        cmd_opfnc_t [spu_t.cmdbuf[spu_t.pc]] (&spu_t);
+        cmd_opfnc_t [* (int*)( (char*) spu_t.cmd_buf + spu_t.pc )] (&spu_t);
     }
 
     spu_err_print(spu_t);
@@ -449,7 +382,7 @@ int main(int argc, char** argv) {
 }
 
 //----------------------------------------------------------------------------------------------------------------
-
+/*
 #undef FORMAT_LINE
 #define FORMAT_LINE "-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\n"
 void spu_dump(spu_t spu_t, str_t __file, int __line) {
@@ -460,19 +393,19 @@ void spu_dump(spu_t spu_t, str_t __file, int __line) {
 
     ERRLOG("SPU dump was called from " FAT"%s:%d.\n\n" DEF, __file, __line);
 
-    $ad(spu_t.regbuf, 5);
+    $ad(spu_t.reg_buf, 5);
 
     ERRLOG("Command list:\n\n");
 
     int portlen = 20;
 
-    for (int p = 0; p < spu_t.cmdbuflen / portlen + 1; p ++) {
+    for (int p = 0; p < spu_t.cmd_buflen / portlen + 1; p ++) {
 
         for (int i = p * portlen; i < portlen * (p + 1); i++) {
 
             if (i == spu_t.pc) ERRLOG(FAT YELLOW);
 
-            if (i > spu_t.cmdbuflen) ERRLOG(BLACK);
+            if (i > spu_t.cmd_buflen) ERRLOG(BLACK);
 
             ERRLOG(FAT "%9d", i);
             ERRLOG(DEF);
@@ -484,9 +417,9 @@ void spu_dump(spu_t spu_t, str_t __file, int __line) {
 
             if (i == spu_t.pc) ERRLOG(FAT YELLOW);
 
-            if (i > spu_t.cmdbuflen) ERRLOG(BLACK);
+            if (i > spu_t.cmd_buflen) ERRLOG(BLACK);
 
-            ERRLOG("%9d", spu_t.cmdbuf[i]);
+            ERRLOG("%9d", spu_t.cmd_buf[i]);
             ERRLOG(DEF);
         }
 
@@ -514,7 +447,7 @@ void spu_dump(spu_t spu_t, str_t __file, int __line) {
     getchar();
 }
 #undef FORMAT_LINE
-
+*/
 //----------------------------------------------------------------------------------------------------------------
 
 void spu_err_print(spu_t spu_t) {
@@ -562,8 +495,8 @@ void spu_t_ctor(spu_t* spu_t, int argc, char** argv) {
     STACK_CTOR(spu_t->stk, 4);
     STACK_CTOR(spu_t->calltree, 4);
 
-    spu_t->regbuf = (int*) calloc(5, sizeof(int));
-    spu_t->cmdbuf = (int*) calloc(MAX_CMD_QTY, sizeof(int));
+    spu_t->reg_buf = (int*) calloc(5, sizeof(int));
+    // spu_t->cmd_buf = (int*) calloc(MAX_CMD_QTY, sizeof(int));
 
     FILE* cmd_list_fl = fopen(argv[1], "rb");
 
@@ -572,14 +505,31 @@ void spu_t_ctor(spu_t* spu_t, int argc, char** argv) {
         ERRLOG(RED FAT "No such file.\n" DEF);
     }
 
-    $p(spu_t->cmdbuf);
-    fread(spu_t->cmdbuf, sizeof(int), MAX_CMD_QTY, cmd_list_fl);
+    void* signa_arr = calloc(1, 8 + 2 * 4);
 
-    // $ad(spu_t->cmdbuf, 40);
+    fread(signa_arr, 16, 1, cmd_list_fl);
+
+    // $ad(spu_t->cmd_buf, 40);
+
+    for (int i = 0; i < 8; i++) {
+
+        putchar(*((char*) signa_arr + i));
+    }
+
+    $sn;
+
+    spu_t->cmd_qty = *((int*) signa_arr + 2);
+    spu_t->cmd_buf_size = spu_t->cmd_qty * 1 + (*((int*) signa_arr + 3) - spu_t->cmd_qty) * 4;
+
+
+    printf("Number of cmd = %zu\n", spu_t->cmd_qty);
+    printf("All = %zu\n", spu_t->cmd_buf_size);
+
+    spu_t->cmd_buf = calloc(spu_t->cmd_buf_size, 1);
+    fread(spu_t->cmd_buf, 1, spu_t->cmd_buf_size, cmd_list_fl);
 
     fclose(cmd_list_fl);
 
-    spu_t->cmdbuflen = CMD_BUF_LEN;
     spu_t->pc = 0;
     spu_t->onbreak = (cmd_err) 0;
 }
@@ -590,9 +540,11 @@ void spu_t_dtor(spu_t* spu_t) {
 
     STACK_DTOR(spu_t->stk);
     STACK_DTOR(spu_t->calltree);
-    free(spu_t->regbuf);
-    free(spu_t->cmdbuf);
+    free(spu_t->reg_buf);
+    free(spu_t->cmd_buf);
     spu_t->pc = -1;
+    spu_t->cmd_buf_size = -1;
+    spu_t->cmd_qty = -1;
     spu_t->onbreak = (cmd_err) 0;
 }
 
