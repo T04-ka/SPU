@@ -7,6 +7,10 @@
 
 #define MAX_CMD_QTY 1000
 
+// const char SIGNATURE___TOUCH_ONLY_IF_YOU_DONT_AFRAID_OF_THE_CONSEQUENSES[] = {'Y', 'A', 'S', 'H', 'A', '4', 'M', 'O'};
+
+const unsigned long SIGNATURE___TOUCH_ONLY_IF_YOU_DONT_AFRAID_OF_THE_CONSEQUENSES[] = {0x4f4d344148534159};
+
 enum cmd_n
 {
     cmd_n_ERROR = -2,

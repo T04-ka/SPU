@@ -9,6 +9,7 @@
 
 #include <cassert>
 #include <ctype.h>
+#include <iterator>
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
@@ -16,8 +17,6 @@
 //----------------------------------------------------------------------------------------------------------------
 
 #define MAX_LABEL_QTY 1000
-
-str_t SIGNATURE = "YASHAPIDORAS";
 
 //----------------------------------------------------------------------------------------------------------------
 
@@ -105,6 +104,8 @@ int asm_data_ctor(asm_data_t* asm_data_ptr);
 
 int asm_data_dtor(asm_data_t* asm_data_ptr);
 
+int write_header(asm_data_t asm_data);
+
 //----------------------------------------------------------------------------------------------------------------
 
 #define WRITE_LABEL_LIST    false
@@ -129,6 +130,8 @@ int main(int argc, char** argv) {
     $d(asm_data.pc);
     $d(asm_data.number_of_cmnds);
     if (!compile_ok.errnum) {
+
+        write_header(asm_data);
 
         // asm_data.code_buf_sz = asm_data.pc;
         asm_data.pc = 0;
@@ -503,3 +506,14 @@ int asm_data_dtor(asm_data_t* asm_data_ptr) {
 }
 
 //----------------------------------------------------------------------------------------------------------------
+
+int write_header(asm_data_t asm_data) {
+
+    fwrite(SIGNATURE___TOUCH_ONLY_IF_YOU_DONT_AFRAID_OF_THE_CONSEQUENSES, 8, 1, asm_data.bin_fl);
+
+    int write_arr[] = {asm_data.number_of_cmnds, asm_data.pc};
+
+    fwrite(write_arr, sizeof(int), sizeof(write_arr)/sizeof(int), asm_data.bin_fl);
+
+    return 0;
+}
