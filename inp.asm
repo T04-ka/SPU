@@ -1,6 +1,6 @@
-PUSH 1
+PUSH  1
 OUT
-JUMP :1
+JUMP : 1
 :2
 HALT
 : 1
