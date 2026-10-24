@@ -432,7 +432,7 @@ int write_command(asm_data_t* asm_data_ptr, int arg, bool is_command) {
         char arr_to_write[1] = {(char) arg};
         fwrite(arr_to_write, sizeof(char), 1, asm_data_ptr->bin_fl);
 
-        fprintf(asm_data_ptr->asm_lst_fl, "%16s| %8d | %#16.8x | %8s |\n", "", arg, (unsigned) asm_data_ptr->pc, cmd_l[arg].name);
+        fprintf(asm_data_ptr->asm_lst_fl, "%16s| %8d | %#16.8x | %#16.8x | %8s |\n", "", arg, (unsigned) arg, (unsigned) asm_data_ptr->pc - 1, cmd_l[arg].name);
 
 
         return 0;
@@ -444,7 +444,7 @@ int write_command(asm_data_t* asm_data_ptr, int arg, bool is_command) {
 
 
 
-    fprintf(asm_data_ptr->asm_lst_fl, "%16s| %8d | %#16.8x | %8s |\n", "", arg, (unsigned) asm_data_ptr->pc, "");
+    fprintf(asm_data_ptr->asm_lst_fl, "%16s| %8d | %#16.8x | %#16.8x | %8d |\n", "", arg, (unsigned) arg, (unsigned) asm_data_ptr->pc - 4, arg);
 
     return 0;
 }
@@ -487,6 +487,7 @@ int asm_data_dtor(asm_data_t* asm_data_ptr) {
 
     filedatastrdestr(&asm_data_ptr->inp_file_data); //YASHA YEBANIY PIDOR DOLBOEB, NE UMEET CHITAT` SLOVA NA ANGLIYSKOM
 
+    fprintf(asm_data_ptr->asm_lst_fl, "%16s|__________|__________________|__________________|__________|\n", "");
     fprintf(asm_data_ptr->asm_lst_fl, FORMAT_LINE FORMAT_LINE);
 
     fclose(asm_data_ptr->inp_fl);
@@ -508,6 +509,13 @@ int write_header(asm_data_t asm_data) {
 
     fprintf(asm_data.asm_lst_fl, FORMAT_LINE);
     fprintf(asm_data.asm_lst_fl, FORMAT_LINE);
+    fprintf(asm_data.asm_lst_fl, "%17s", "");
+    for (int i = 0; i < 59; i++) {fprintf(asm_data.asm_lst_fl, "_");}
+    fprintf(asm_data.asm_lst_fl, "\n%16s| %8s | %16s | %16s | %8s |\n", "", "DEC", "HEX", "ADDRESS", "BYTECODE");
+    // fprintf(asm_data.asm_lst_fl, "%16s|__________|__________________|__________________|==========|\n", "");
+    fprintf(asm_data.asm_lst_fl, "%16s|==========|==================|==================|==========|\n", "");
+
+
 
     return 0;
 }
