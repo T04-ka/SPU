@@ -1,4 +1,9 @@
-PUSH 1
-POPR 1
-PUSHR 1
+POP B
+: 1
+POP [ 1] 
+POP [B ]
+PUSH B
+PUSH [1]
+PUSH [B]
 HALT
+JUMP : 1

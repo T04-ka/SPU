@@ -83,7 +83,7 @@ typedef int spu_opfnc_t(spu_t* spu_t);
 
 spu_opfnc_t* cmd_opfnc_t [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT - 2] =
 
-// int (*cmd_l[CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT])(spu_t*, stack_t*, cmd_err*) =
+// int (*CMD_L[CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT])(spu_t*, stack_t*, cmd_err*) =
     {
         spu_halt,
         spu_push,
@@ -230,13 +230,13 @@ int spu_halt(spu_t* spu_t) {
 }
 
 //----------------------------------------------------------------------------------------------------------------
-
+//УЧЕСТЬ ЧТО МЕТКА В 1000 раз больше
 int spu_jump(spu_t* spu_t) {
 
 
     int copied_arg = 0;
     memcpy(&copied_arg, &GET_ARG(spu_t->pc + CMDSZ), 4);
-    spu_t->pc = copied_arg;
+    spu_t->pc = copied_arg; // VOT TUT NAVERNOE
 
     return 0;
 }

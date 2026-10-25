@@ -1,3 +1,5 @@
+#include <exception>
+#define DEBUG
 #include "./../../myformat.cpp"
 
 #include "./../Onegin/strfuncs.h"
@@ -38,6 +40,14 @@ str_t ASM_ERR_MSG_L[] = {
     "Attempt to redefine the label",
     "Miss a label",
     "Such a label doesn't exist",
+};
+
+const char REG_NAME_L[] = {
+    'A',
+    'B',
+    'C',
+    'D',
+    'E',
 };
 
 enum arg_def_ret_t
@@ -95,6 +105,13 @@ int write_header(asm_data_t asm_data);
 #define WRITE_LABEL_LIST    false
 #define WRITE_DATA_IN_FILE  true
 
+#define ERROG_RETURN                                                    \
+compile_ok.flnm = asm_data.inpfl_nm;                                    \
+compile_ok.str = asm_data.inp_file_data.prsdbffr[compile_ok.nln].str;   \
+errlog(compile_ok);                                                     \
+asm_data_dtor(&asm_data);                                               \
+return 1;
+
 int main(int argc, char** argv) {
 
     asm_data_t asm_data = {.inpfl_nm = argv[1], .asm_lst_fl_nm = "asmlist.txt", .bin_fl_nm = "code.bin"};
@@ -109,11 +126,11 @@ int main(int argc, char** argv) {
 
     asm_data.on_write = WRITE_LABEL_LIST;
     asm_err_t compile_ok = compile(&asm_data);
-
-    $ad(asm_data.label_buf, 10);
-    $d(asm_data.pc);
-    $d(asm_data.number_of_cmnds);
-
+//
+//     $ad(asm_data.label_buf, 10);
+//     $d(asm_data.pc);
+//     $d(asm_data.number_of_cmnds);
+    // $d(compile_ok.errnum)
     if (!compile_ok.errnum) {
 
         write_header(asm_data);
@@ -121,17 +138,14 @@ int main(int argc, char** argv) {
         // asm_data.code_buf_sz = asm_data.pc;
         asm_data.pc = 0;
         asm_data.on_write = WRITE_DATA_IN_FILE;
-        compile(&asm_data);
-    }
-    else {
-
-        compile_ok.flnm = asm_data.inpfl_nm;
-        compile_ok.str = asm_data.inp_file_data.prsdbffr[compile_ok.nln].str;
-        $err(FAT RED "Error\n" DEF);
-        errlog(compile_ok);
+        compile_ok = compile(&asm_data);
     }
 
-    $ad(asm_data.label_buf, 10);
+    if (compile_ok.errnum) {
+
+        ERROG_RETURN;
+    }
+    // $ad(asm_data.label_buf, 10);
 
     asm_data_dtor(&asm_data);
 
@@ -202,6 +216,7 @@ int string_pointer_shift(char** current_str_ptr, int n_chr_shft);
 asm_err_n command_as_label_handle(asm_data_t* asm_data_ptr, char** current_str_ptr);
 asm_err_n argument_as_label_handle(asm_data_t* asm_data_ptr, char** current_str_ptr);
 asm_err_n default_argument_handle(asm_data_t* asm_data_ptr, char** current_str_ptr);
+asm_err_n push_and_pop_argument_handle(asm_data_t* asm_data_ptr, char** current_str, cmd_n cmd_n);
 int write_command(asm_data_t* asm_data_ptr, int argument, bool is_command);
 
 #define ERROR   1
@@ -232,8 +247,9 @@ asm_err_t compile(asm_data_t* asm_data_ptr) {
             RETURN_ERROR(asm_err_WRONG_CMD);
         }
 
-        if (command_number == cmd_n_LABEL) {
+        // $;
 
+        if (command_number == cmd_n_LABEL) {
 
             asm_err_n errnum = command_as_label_handle(asm_data_ptr, &current_str);
             if (errnum) RETURN_ERROR(errnum);
@@ -241,13 +257,25 @@ asm_err_t compile(asm_data_t* asm_data_ptr) {
             RETURN_IF_END_EMPTY;
         }
 
-        if (cmd_l[command_number].label) {
+        // $;
 
+        if (command_number == (int) cmd_n_PUSH || command_number == (int) cmd_n_POP) {
+            // $;
+            asm_err_n errnum = push_and_pop_argument_handle(asm_data_ptr, &current_str, (cmd_n) command_number);
+            if (errnum) RETURN_ERROR(errnum);
+
+            // $s(current_str);
+            RETURN_IF_END_EMPTY;
+        }
+
+        if (CMD_L[command_number].label) {
+            // $;
             asm_err_n errnum = argument_as_label_handle(asm_data_ptr, &current_str);
+            // $d((int) errnum);
             if (errnum) RETURN_ERROR(errnum);
         }
         // $;
-        if (cmd_l[command_number].argqty > 0) {
+        if (CMD_L[command_number].argqty > 0) {
             // $;
 
             asm_err_n errnum = default_argument_handle(asm_data_ptr, &current_str);
@@ -287,7 +315,8 @@ cmd_n command_handle(asm_data_t* asm_data_ptr, char** current_str_ptr) {
 
     for (command_number_read = 0;                                                                   \
         command_number_read < CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT - 2      \
-        && strncmp(*current_str_ptr, cmd_l[command_number_read].name, number_of_characters_read);   \
+        && strncmp(*current_str_ptr, CMD_L[command_number_read].name,                               \
+                   MAX(number_of_characters_read, strlen(CMD_L[command_number_read].name)));        \
         command_number_read++) {}
 
     string_pointer_shift(current_str_ptr, number_of_characters_read);
@@ -297,12 +326,111 @@ cmd_n command_handle(asm_data_t* asm_data_ptr, char** current_str_ptr) {
         return cmd_n_ERROR;
     }
 
-    PC_INCR;
-    asm_data_ptr->number_of_cmnds ++;
-    write_command(asm_data_ptr, cmd_l[command_number_read].num, CMD);
-    return cmd_l[command_number_read].num;
+    if (CMD_L[command_number_read].num != (int) cmd_n_PUSH && CMD_L[command_number_read].num != cmd_n_POP) {
+
+        PC_INCR;
+        asm_data_ptr->number_of_cmnds ++;
+        write_command(asm_data_ptr, CMD_L[command_number_read].num, CMD);
+    }
+    return CMD_L[command_number_read].num;
 }
 
+
+int reg_arg_handle(char** current_str_ptr);
+int reg_arg_handle(char** current_str_ptr) {
+
+    for (int regn = 0; regn < REG_N__NEVER_TOUCH_IT_AT_ALL_BLYAT; regn++) {
+
+        if ((*current_str_ptr)[0] == REGISTER_LIST[regn]) {
+
+            return regn;
+        }
+    }
+
+    return -1;
+}
+
+#define MAX_STR_LEN     30
+#define MAX_STR_LEN_STR "30"
+
+#define SKIP_LAST_BRACKET if (is_mem) {         \
+                                                \
+    read_one_command(current_str_ptr);          \
+    string_pointer_shift(current_str_ptr, 1);   \
+}
+
+asm_err_n push_and_pop_argument_handle(asm_data_t* asm_data_ptr, char** current_str_ptr, cmd_n cmd_number) {
+
+    int number_of_characters_read = read_one_command(current_str_ptr);
+
+    bool is_mem = false;
+    // $s(*current_str_ptr);
+    if ((*current_str_ptr)[0] == '[') {
+        // $;
+        is_mem = true;
+
+        char str_between_squared_brkts[MAX_STR_LEN + 1] = {};
+        sscanf(*current_str_ptr, "[%" MAX_STR_LEN_STR "[^]]%n", str_between_squared_brkts, &number_of_characters_read);
+
+        // $s(*current_str_ptr);
+        // $d(number_of_characters_read);
+
+        if (*(*current_str_ptr + number_of_characters_read) != ']') {
+
+            return asm_err_WRONG_ARG;
+        }
+
+        string_pointer_shift(current_str_ptr, 1);
+    }
+    // $s(*current_str_ptr);
+    int regn = reg_arg_handle(current_str_ptr);
+
+    if (regn != -1) {
+
+        if (is_mem) {
+
+            cmd_number = (cmd_number == cmd_n_PUSH) ? cmd_n_PUSHMR : cmd_n_POPMR;
+        }
+        else {
+
+            cmd_number = (cmd_number == cmd_n_PUSH) ? cmd_n_PUSHR : cmd_n_POPR;
+        }
+
+        string_pointer_shift(current_str_ptr, 1);
+
+        PC_INCR;
+        asm_data_ptr->number_of_cmnds ++;
+        write_command(asm_data_ptr, cmd_number, CMD);
+
+        asm_data_ptr->pc += ARGSZ;
+        write_command(asm_data_ptr, SPU_EXPANENT_COEFF * regn, NONCMD);
+
+        SKIP_LAST_BRACKET;
+
+        return asm_err_NO_ERR;
+    }
+
+    if (is_mem) {
+
+        cmd_number = (cmd_number == cmd_n_PUSH) ? cmd_n_PUSHM : cmd_n_POPM;
+    }
+
+    PC_INCR;
+    asm_data_ptr->number_of_cmnds ++;
+    write_command(asm_data_ptr, cmd_number, CMD);
+    // $;
+    // $s(*current_str_ptr);
+    asm_err_n errnum = default_argument_handle(asm_data_ptr, current_str_ptr);
+    // $s(*current_str_ptr);
+
+    SKIP_LAST_BRACKET;
+    // printf("%d", errnum);
+
+    // string_pointer_shift(current_str_ptr, number_of_characters_read * is_mem);
+    // $s(*current_str_ptr);
+    return errnum;
+}
+//СДЕЛАТЬ КОМАНДУ POP - удаление элемента из стека
 //----------------------------------------------------------------------------------------------------------------
 
 asm_err_n command_as_label_handle(asm_data_t* asm_data_ptr, char** current_str_ptr) {
@@ -366,14 +494,15 @@ asm_err_n argument_as_label_handle(asm_data_t* asm_data_ptr, char** current_str_
         asm_data_ptr->pc += ARGSZ;
         return asm_err_NO_ERR;
     }
-
+    // $d(asm_data_ptr->label_buf[label_number]);
     if (asm_data_ptr->label_buf[label_number] == -1) {
 
+        // $;
         return asm_err_LABEL_NOT_EXST; //NO SUCH LABEL
     }
 
     asm_data_ptr->pc += ARGSZ;
-    write_command(asm_data_ptr, asm_data_ptr->label_buf[label_number], NONCMD);
+    write_command(asm_data_ptr, SPU_EXPANENT_COEFF * asm_data_ptr->label_buf[label_number], NONCMD);
 
     return asm_err_NO_ERR;
 }
@@ -385,7 +514,7 @@ asm_err_n default_argument_handle(asm_data_t* asm_data_ptr, char** current_str_p
     int number_of_characters_read = read_one_command(current_str_ptr);
 
     double argument = NAN;
-    sscanf(*current_str_ptr, "%lg", &argument);
+    sscanf(*current_str_ptr, "%lg%n", &argument, &number_of_characters_read);
     string_pointer_shift(current_str_ptr, number_of_characters_read);
 
     if (isnan(argument)) {
@@ -432,7 +561,7 @@ int write_command(asm_data_t* asm_data_ptr, int arg, bool is_command) {
         char arr_to_write[1] = {(char) arg};
         fwrite(arr_to_write, sizeof(char), 1, asm_data_ptr->bin_fl);
 
-        fprintf(asm_data_ptr->asm_lst_fl, "%16s| %8d | %#16.8x | %#16.8x | %8s |\n", "", arg, (unsigned) arg, (unsigned) asm_data_ptr->pc - 1, cmd_l[arg].name);
+        fprintf(asm_data_ptr->asm_lst_fl, "%16s| %8d | %#16.8x | %#16.8x | %8s |\n", "", arg, (unsigned) arg, (unsigned) asm_data_ptr->pc - 1, CMD_L[arg].name);
 
 
         return 0;
@@ -444,8 +573,9 @@ int write_command(asm_data_t* asm_data_ptr, int arg, bool is_command) {
 
 
 
-    fprintf(asm_data_ptr->asm_lst_fl, "%16s| %8d | %#16.8x | %#16.8x | %8d |\n", "", arg, (unsigned) arg, (unsigned) asm_data_ptr->pc - 4, arg);
+    fprintf(asm_data_ptr->asm_lst_fl, "%16s| %8d | %#16.8x | %#16.8x | ", "", arg, (unsigned) arg, (unsigned) asm_data_ptr->pc - 4);
 
+    fprintf(asm_data_ptr->asm_lst_fl, "%8d |\n", arg / SPU_EXPANENT_COEFF);
     return 0;
 }
 

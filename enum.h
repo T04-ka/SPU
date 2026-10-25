@@ -16,31 +16,34 @@ const unsigned long SIGNATURE___TOUCH_ONLY_IF_YOU_DONT_AFRAID_OF_THE_CONSEQUENSE
 
 enum cmd_n
 {
-    cmd_n_ERROR = -2,
-    cmd_n_LABEL = -1,
-    cmd_n_HALT = 0,
-    cmd_n_PUSH = 1,
-    cmd_n_ADD = 2,
-    cmd_n_SUB = 3,
-    cmd_n_DIV = 4,
-    cmd_n_MUL = 5,
-    cmd_n_OUT = 6,
-    cmd_n_JUMP = 7,
-    cmd_n_JMPG = 8,
-    cmd_n_JMPL = 9,
-    cmd_n_JMPE = 10,
-    cmd_n_JMPLE = 11,
-    cmd_n_JMPGE = 12,
-    cmd_n_JMPNE = 13,
-    cmd_n_CALL = 14,
-    cmd_n_RET = 15,
-    cmd_n_PUSHR = 16,
-    cmd_n_POPR = 17,
-    // cmd_n_PUSHM = 18,
-    // cmd_n_POPM = 19,
+    cmd_n_ERROR     = -2,
+    cmd_n_LABEL     = -1,
+    cmd_n_HALT      = 0,
+    cmd_n_PUSH      = 1,
+    cmd_n_ADD       = 2,
+    cmd_n_SUB       = 3,
+    cmd_n_DIV       = 4,
+    cmd_n_MUL       = 5,
+    cmd_n_OUT       = 6,
+    cmd_n_JUMP      = 7,
+    cmd_n_JMPG      = 8,
+    cmd_n_JMPL      = 9,
+    cmd_n_JMPE      = 10,
+    cmd_n_JMPLE     = 11,
+    cmd_n_JMPGE     = 12,
+    cmd_n_JMPNE     = 13,
+    cmd_n_CALL      = 14,
+    cmd_n_RET       = 15,
+    cmd_n_PUSHR     = 16,
+    cmd_n_POPR      = 17,
+    cmd_n_PUSHM     = 18,
+    cmd_n_POPM      = 19,
+    cmd_n_POP       = 20,
+    cmd_n_PUSHMR    = 21,
+    cmd_n_POPMR     = 22,
 };
 
-const int CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT = 20;
+const int CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT = 25;
 
 struct cmd_t
 {
@@ -53,7 +56,7 @@ struct cmd_t
 
 #define SET_CMD(CMD, ARGQTY, TAG) {#CMD, cmd_n_ ##CMD, ARGQTY, TAG}
 
-const cmd_t cmd_l [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT] =
+const cmd_t CMD_L [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT] =
     {
         SET_CMD(HALT, 0, 0),
         SET_CMD(PUSH, 1, 0),
@@ -72,7 +75,24 @@ const cmd_t cmd_l [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT]
         SET_CMD(CALL, 0, 1),
         SET_CMD(RET, 0, 0),
         SET_CMD(PUSHR, 1, 0),
-        SET_CMD(POPR, 1, 0)
+        SET_CMD(POPR, 1, 0),
+        SET_CMD(PUSHM, 1, 0),
+        SET_CMD(POPM, 1, 0),
+        SET_CMD(POP, 1, 0),
+        SET_CMD(PUSHMR, 1, 0),
+        SET_CMD(POPMR, 1, 0),
+    };
+
+
+const int REG_N__NEVER_TOUCH_IT_AT_ALL_BLYAT = 5;
+
+const char REGISTER_LIST[REG_N__NEVER_TOUCH_IT_AT_ALL_BLYAT] =
+    {
+        'A',
+        'B',
+        'C',
+        'D',
+        'E',
     };
 
 //#include "zhr_pdr.h"
