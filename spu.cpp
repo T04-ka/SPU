@@ -1,10 +1,8 @@
 
 // #define DEBUG
-#include <cstring>
-#include <ios>
 #include <stdio.h>
 #include <stdlib.h>
-#include "./../Stack/stack.h"
+#include "./../Stack/Stack_int/stack.h"
 #include "./../Onegin/strfuncs.h"
 #include "enum.h"
 

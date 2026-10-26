@@ -1,11 +1,12 @@
-#include <exception>
+
 #define DEBUG
 #include "./../../myformat.cpp"
 
 #include "./../Onegin/strfuncs.h"
 #include "./../Onegin/io.h"
 
-#include "./../Stack/stack.h"
+#include "./../Stack/Stack_ptr/stack_ptr.h"
+#include "./../Stack/Stack_int/stack.h"
 
 #include "enum.h"
 
@@ -61,11 +62,12 @@ enum arg_def_ret_t
 
 struct asm_data_t
 {
-    int         number_of_cmnds;
-    int         pc;
-    int*        label_buf;
-    bool        on_write;
-    filedata    inp_file_data;
+    int          number_of_cmnds;
+    int          pc;
+    stack_ptr_t  label_name_stk;
+    stack_t      label_value_stk;
+    bool         on_write;
+    filedata     inp_file_data;
 
     FILE*       inp_fl;
     FILE*       asm_lst_fl;
@@ -112,6 +114,8 @@ errlog(compile_ok);                                                     \
 asm_data_dtor(&asm_data);                                               \
 return 1;
 
+//----------------------------------------------------------------------------------------------------------------
+
 int main(int argc, char** argv) {
 
     asm_data_t asm_data = {.inpfl_nm = argv[1], .asm_lst_fl_nm = "asmlist.txt", .bin_fl_nm = "code.bin"};
@@ -151,6 +155,7 @@ int main(int argc, char** argv) {
 
     return 0;
 }
+#undef ERROG_RETURN
 
 //----------------------------------------------------------------------------------------------------------------
 
@@ -432,31 +437,35 @@ asm_err_n push_and_pop_argument_handle(asm_data_t* asm_data_ptr, char** current_
 }
 //СДЕЛАТЬ КОМАНДУ POP - удаление элемента из стека
 //----------------------------------------------------------------------------------------------------------------
+int find_label_name_in_buf(asm_data_t* asm_data_ptr, char* label_name);
 
 asm_err_n command_as_label_handle(asm_data_t* asm_data_ptr, char** current_str_ptr) {
 
     int number_of_characters_read = read_one_command(current_str_ptr);
 
-    int label_number = -1;
-    sscanf(*current_str_ptr, "%d", &label_number);
-    string_pointer_shift(current_str_ptr, number_of_characters_read);
-
     if (asm_data_ptr->on_write) {
 
+        string_pointer_shift(current_str_ptr, number_of_characters_read);
         return asm_err_NO_ERR;
     }
 
-    if (label_number == -1) {
+    if (strlen(*current_str_ptr) != number_of_characters_read) {
 
-        return asm_err_WRONG_LABEL; //WRONG LABEL NAME
+        return asm_err_WRONG_LABEL;
     }
 
-    if (asm_data_ptr->label_buf[label_number] != -1) {
+    char* label_name = *current_str_ptr;
+
+    int label_number = find_label_name_in_buf(asm_data_ptr, label_name);
+    if (label_number != -1) {
 
         return asm_err_LABEL_REDFNTN; //REDEFINITION OF LABEL
     }
 
-    asm_data_ptr->label_buf[label_number] = asm_data_ptr->pc;
+    STACK_PTR_PUSH(&asm_data_ptr->label_name_stk, label_name);
+    STACK_PUSH(&asm_data_ptr->label_value_stk, asm_data_ptr->pc);
+
+    string_pointer_shift(current_str_ptr, number_of_characters_read);
 
     return asm_err_NO_ERR;
 }
@@ -591,12 +600,8 @@ int string_pointer_shift(char** current_str_ptr, int n_chr_shft) {
 //TODO СДЕЛАТЬ ОБРАБТКУ ОШИБОК
 int asm_data_ctor(asm_data_t* asm_data_ptr) {
 
-    asm_data_ptr->label_buf = (int*) calloc(MAX_LABEL_QTY, sizeof(int));
-
-    for (int i = 0; i < MAX_LABEL_QTY; i++){
-
-        asm_data_ptr->label_buf[i] = -1;
-    }
+    STACK_CTOR(asm_data_ptr->label_value_stk, 4);
+    STACK_PTR_CTOR(asm_data_ptr->label_name_stk, 4);
 
     asm_data_ptr->inp_fl      = fopen(asm_data_ptr->inpfl_nm, "r");
     asm_data_ptr->asm_lst_fl  = fopen(asm_data_ptr->asm_lst_fl_nm, "w");
@@ -613,7 +618,8 @@ int asm_data_ctor(asm_data_t* asm_data_ptr) {
 //TODO СДЕЛАТЬ ОБРАБТКУ ОШИБОК
 int asm_data_dtor(asm_data_t* asm_data_ptr) {
 
-    free(asm_data_ptr->label_buf);
+    STACK_DTOR(asm_data_ptr->label_value_stk);
+    STACK_PTR_DTOR(asm_data_ptr->label_name_stk);
 
     filedatastrdestr(&asm_data_ptr->inp_file_data); //YASHA YEBANIY PIDOR DOLBOEB, NE UMEET CHITAT` SLOVA NA ANGLIYSKOM
 
