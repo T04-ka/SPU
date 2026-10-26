@@ -1,1 +1,1 @@
- g+++ -o spu spu.cpp ./../Stack/stack.cpp ./../Onegin/strfuncs.cpp
+ g+++ -o spu spu.cpp ./../Stack/Stack_int/stack.cpp 

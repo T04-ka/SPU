@@ -1,9 +1,9 @@
 
-// #define DEBUG
+#define DEBUG
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include "./../Stack/Stack_int/stack.h"
-#include "./../Onegin/strfuncs.h"
 #include "enum.h"
 
 #define LOGFL stderr
@@ -127,7 +127,7 @@ int spu_push(spu_t* spu_t) {
 
     PC_INCR;
     // сделать через memcpy
-    $d(( *(unsigned int*)((char*) spu_t->cmd_buf + spu_t->pc) ));
+    // $du(( *(unsigned int*)((char*) spu_t->cmd_buf + spu_t->pc) ));
 
     int copied_arg = 0;
     memcpy(&copied_arg, &GET_ARG(spu_t->pc), 4);
@@ -231,10 +231,9 @@ int spu_halt(spu_t* spu_t) {
 //УЧЕСТЬ ЧТО МЕТКА В 1000 раз больше
 int spu_jump(spu_t* spu_t) {
 
-
     int copied_arg = 0;
     memcpy(&copied_arg, &GET_ARG(spu_t->pc + CMDSZ), 4);
-    spu_t->pc = copied_arg; // VOT TUT NAVERNOE
+    spu_t->pc = copied_arg / SPU_EXPANENT_COEFF; // VOT TUT NAVERNOE
 
     return 0;
 }
@@ -252,7 +251,7 @@ if (scnd_chr CMP frst_chr) {                                            \
                                                                         \
     int copied_arg = 0;                                                 \
     memcpy(&copied_arg, &GET_ARG(spu_t->pc + CMDSZ), 4);                \
-    spu_t->pc = copied_arg;                                             \
+    spu_t->pc = copied_arg / SPU_EXPANENT_COEFF;                        \
 }                                                                       \
 else {                                                                  \
                                                                         \
@@ -556,7 +555,7 @@ int spu_t_ctor(spu_t* spu_t, int argc, char** argv) {
     spu_t->cmd_buf = calloc(spu_t->cmd_buf_size, 1);
     fread(spu_t->cmd_buf, 1, spu_t->cmd_buf_size, cmd_list_fl);
 
-    $ad(((char*) spu_t->cmd_buf), spu_t->cmd_buf_size);
+    // $ad(((char*) spu_t->cmd_buf), spu_t->cmd_buf_size);
 
     free(signa_arr);
     fclose(cmd_list_fl);

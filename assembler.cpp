@@ -1,4 +1,3 @@
-
 #define DEBUG
 #include "./../../myformat.cpp"
 
@@ -130,15 +129,20 @@ int main(int argc, char** argv) {
 
     asm_data.on_write = WRITE_LABEL_LIST;
     asm_err_t compile_ok = compile(&asm_data);
+
+//     for (int i = 0; i < asm_data.label_name_stk.sz; i++) {
 //
-//     $ad(asm_data.label_buf, 10);
+//         printf("|%s|, ", asm_data.label_name_stk.bffr[i]);
+//     }
+//     $std("\b\b\b\n");
 //     $d(asm_data.pc);
 //     $d(asm_data.number_of_cmnds);
     // $d(compile_ok.errnum)
+
     if (!compile_ok.errnum) {
 
         write_header(asm_data);
-
+        // $;
         // asm_data.code_buf_sz = asm_data.pc;
         asm_data.pc = 0;
         asm_data.on_write = WRITE_DATA_IN_FILE;
@@ -182,15 +186,6 @@ bool is_onlyspace(string str) {
 
 //----------------------------------------------------------------------------------------------------------------
 
-
-//MENTORSKAYA MUDROST
-//  счтал токен - скипнул нахуй (передвинул указатель дальше)
-//  всё
-//
-//
-
-/// Skips no more then n first spaces, or until '\0' is found
-/// If all symbols are spaces, return 0, else return 1 and put in "str_ptr" the pointer on first non-space symbol.
 int skipn_spaces(const char* str, const char** str_ptr, int n) {
 
     // fprintf(stderr, "str = |%s|\n", str);
@@ -216,13 +211,27 @@ int skipn_spaces(const char* str, const char** str_ptr, int n) {
 //----------------------------------------------------------------------------------------------------------------
 
 int read_one_command(char** current_str_ptr);
+
 cmd_n command_handle(asm_data_t* asm_data_ptr, char** current_str_ptr);
+
 int string_pointer_shift(char** current_str_ptr, int n_chr_shft);
+
 asm_err_n command_as_label_handle(asm_data_t* asm_data_ptr, char** current_str_ptr);
+
 asm_err_n argument_as_label_handle(asm_data_t* asm_data_ptr, char** current_str_ptr);
+
 asm_err_n default_argument_handle(asm_data_t* asm_data_ptr, char** current_str_ptr);
+
 asm_err_n push_and_pop_argument_handle(asm_data_t* asm_data_ptr, char** current_str, cmd_n cmd_n);
+
 int write_command(asm_data_t* asm_data_ptr, int argument, bool is_command);
+
+int reg_arg_handle(char** current_str_ptr);
+
+/// Returns label number if label exist, -1 if not.
+int find_label_name_in_buf(asm_data_t* asm_data_ptr, char* label_name);
+
+//----------------------------------------------------------------------------------------------------------------
 
 #define ERROR   1
 #define NOERROR 0
@@ -230,6 +239,8 @@ int write_command(asm_data_t* asm_data_ptr, int argument, bool is_command);
 #define RETURN_ERROR(ERR) return (asm_err_t) {.errnum = ERR, .nln = nln}
 
 #define RETURN_IF_END_EMPTY if (!is_onlyspace({.str = current_str, .len = (int) strlen(current_str) + 1})) RETURN_ERROR(asm_err_ARG_QTY_EXC); else continue;
+
+//----------------------------------------------------------------------------------------------------------------
 
 asm_err_t compile(asm_data_t* asm_data_ptr) {
 
@@ -304,6 +315,9 @@ asm_err_t compile(asm_data_t* asm_data_ptr) {
 #define NONCMD  false
 #define PC_INCR asm_data_ptr->pc++;
 
+#define LABEL_VALUE_BUF asm_data_ptr->label_value_stk.bffr
+#define LABEL_NAME_BUF  asm_data_ptr->label_name_stk.bffr
+
 //----------------------------------------------------------------------------------------------------------------
 
 cmd_n command_handle(asm_data_t* asm_data_ptr, char** current_str_ptr) {
@@ -340,8 +354,8 @@ cmd_n command_handle(asm_data_t* asm_data_ptr, char** current_str_ptr) {
     return CMD_L[command_number_read].num;
 }
 
+//----------------------------------------------------------------------------------------------------------------
 
-int reg_arg_handle(char** current_str_ptr);
 int reg_arg_handle(char** current_str_ptr) {
 
     for (int regn = 0; regn < REG_N__NEVER_TOUCH_IT_AT_ALL_BLYAT; regn++) {
@@ -355,6 +369,8 @@ int reg_arg_handle(char** current_str_ptr) {
     return -1;
 }
 
+//----------------------------------------------------------------------------------------------------------------
+
 #define MAX_STR_LEN     30
 #define MAX_STR_LEN_STR "30"
 
@@ -363,6 +379,8 @@ int reg_arg_handle(char** current_str_ptr) {
     read_one_command(current_str_ptr);          \
     string_pointer_shift(current_str_ptr, 1);   \
 }
+
+//----------------------------------------------------------------------------------------------------------------
 
 asm_err_n push_and_pop_argument_handle(asm_data_t* asm_data_ptr, char** current_str_ptr, cmd_n cmd_number) {
 
@@ -437,7 +455,6 @@ asm_err_n push_and_pop_argument_handle(asm_data_t* asm_data_ptr, char** current_
 }
 //СДЕЛАТЬ КОМАНДУ POP - удаление элемента из стека
 //----------------------------------------------------------------------------------------------------------------
-int find_label_name_in_buf(asm_data_t* asm_data_ptr, char* label_name);
 
 asm_err_n command_as_label_handle(asm_data_t* asm_data_ptr, char** current_str_ptr) {
 
@@ -458,7 +475,7 @@ asm_err_n command_as_label_handle(asm_data_t* asm_data_ptr, char** current_str_p
 
     int label_number = find_label_name_in_buf(asm_data_ptr, label_name);
     if (label_number != -1) {
-
+        $d(label_number);
         return asm_err_LABEL_REDFNTN; //REDEFINITION OF LABEL
     }
 
@@ -489,29 +506,25 @@ asm_err_n argument_as_label_handle(asm_data_t* asm_data_ptr, char** current_str_
         number_of_characters_read = read_one_command(current_str_ptr);
     }
 
-    int label_number = -1;
-    sscanf(*current_str_ptr, "%d", &label_number);
+    char* label_name = *current_str_ptr;
+    int label_number = find_label_name_in_buf(asm_data_ptr, label_name);
+
     string_pointer_shift(current_str_ptr, number_of_characters_read);
 
-    if (label_number == -1) {
-
-        return asm_err_WRONG_LABEL; //WRONG LABEL NAME
-    }
 
     if (!asm_data_ptr->on_write) { // NO CHECK LABEL IF LABEL ARR NOT WRITTEN (FIRST CODE ASM)
 
         asm_data_ptr->pc += ARGSZ;
         return asm_err_NO_ERR;
     }
-    // $d(asm_data_ptr->label_buf[label_number]);
-    if (asm_data_ptr->label_buf[label_number] == -1) {
 
-        // $;
-        return asm_err_LABEL_NOT_EXST; //NO SUCH LABEL
+    if (label_number == -1) {
+
+        return asm_err_LABEL_NOT_EXST; //WRONG LABEL NAME
     }
 
     asm_data_ptr->pc += ARGSZ;
-    write_command(asm_data_ptr, SPU_EXPANENT_COEFF * asm_data_ptr->label_buf[label_number], NONCMD);
+    write_command(asm_data_ptr, SPU_EXPANENT_COEFF * asm_data_ptr->label_value_stk.bffr[label_number], NONCMD);
 
     return asm_err_NO_ERR;
 }
@@ -547,9 +560,9 @@ int read_one_command(char** current_str_ptr) {
     skipn_spaces(*current_str_ptr, (const char**) current_str_ptr, (int) strlen(*current_str_ptr));
 
     int nread = 0;
-    char* useless_str = (char*) calloc(10, sizeof(char));
+    char* useless_str = NULL;
 
-    sscanf(*current_str_ptr, "%s%n", useless_str, &nread);
+    sscanf(*current_str_ptr, "%ms%n", &useless_str, &nread);
 
     free(useless_str);
 
@@ -577,15 +590,30 @@ int write_command(asm_data_t* asm_data_ptr, int arg, bool is_command) {
     }
 
     int arr_to_write = arg;
-
     fwrite(&arr_to_write, sizeof(int), 1, asm_data_ptr->bin_fl);
 
 
-
     fprintf(asm_data_ptr->asm_lst_fl, "%16s| %8d | %#16.8x | %#16.8x | ", "", arg, (unsigned) arg, (unsigned) asm_data_ptr->pc - 4);
-
     fprintf(asm_data_ptr->asm_lst_fl, "%8d |\n", arg / SPU_EXPANENT_COEFF);
+
     return 0;
+}
+
+//----------------------------------------------------------------------------------------------------------------
+
+int find_label_name_in_buf(asm_data_t* asm_data_ptr, char* label_name) {
+
+    for (int label_number = 0; label_number < asm_data_ptr->label_name_stk.sz; label_number++) {
+
+        // $std("!strcmp(%s, %s) = %d\n", label_name, LABEL_NAME_BUF[label_number], !strcmp(label_name, LABEL_NAME_BUF[label_number]))
+
+        if (!strcmp(label_name, LABEL_NAME_BUF[label_number])) {
+
+            return label_number;
+        }
+    }
+
+    return -1;
 }
 
 //----------------------------------------------------------------------------------------------------------------
