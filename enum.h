@@ -5,13 +5,12 @@
 
 #define SPU_EXPANENT_COEFF 1000
 
-#define MAX_CMD_QTY 1000
-
 #define ARGSZ 4
 #define CMDSZ 1
 
-// const char SIGNATURE___TOUCH_ONLY_IF_YOU_DONT_AFRAID_OF_THE_CONSEQUENSES[] = {'Y', 'A', 'S', 'H', 'A', '4', 'M', 'O'};
+const int MEMORY_SIZE__NE_TROGAI_EGO_ONO_TEBYA_SOJRET = 1048576;
 
+// const char SIGNATURE___TOUCH_ONLY_IF_YOU_DONT_AFRAID_OF_THE_CONSEQUENSES[] = {'Y', 'A', 'S', 'H', 'A', '4', 'M', 'O'};
 const unsigned long SIGNATURE___TOUCH_ONLY_IF_YOU_DONT_AFRAID_OF_THE_CONSEQUENSES[] = {0x4f4d344148534159};
 
 enum cmd_n
@@ -82,7 +81,6 @@ const cmd_t CMD_L [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT]
         SET_CMD(PUSHMR, 1, 0),
         SET_CMD(POPMR, 1, 0),
     };
-
 
 const int REG_N__NEVER_TOUCH_IT_AT_ALL_BLYAT = 5;
 
