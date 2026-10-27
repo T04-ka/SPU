@@ -228,6 +228,8 @@ int write_command(asm_data_t* asm_data_ptr, int argument, bool is_command);
 
 int reg_arg_handle(char** current_str_ptr);
 
+void comment_handle(char* current_str);
+
 /// Returns label number if label exist, -1 if not.
 int find_label_name_in_buf(asm_data_t* asm_data_ptr, char* label_name);
 
@@ -251,6 +253,8 @@ asm_err_t compile(asm_data_t* asm_data_ptr) {
 
         // $std("\n");
         char* current_str = asm_data_ptr->inp_file_data.prsdbffr[nln].str;
+
+        comment_handle(current_str);
 
         if (is_onlyspace({.str = current_str, .len = (int) strlen(current_str) + 1})) continue;
 
@@ -393,7 +397,7 @@ asm_err_n push_and_pop_argument_handle(asm_data_t* asm_data_ptr, char** current_
         is_mem = true;
 
         char str_between_squared_brkts[MAX_STR_LEN + 1] = {};
-        sscanf(*current_str_ptr, "[%" MAX_STR_LEN_STR "[^]]%n", str_between_squared_brkts, &number_of_characters_read);
+        sscanf(*current_str_ptr, "[%" MAX_STR_LEN_STR "[^];]%n", str_between_squared_brkts, &number_of_characters_read);
 
         // $s(*current_str_ptr);
         // $d(number_of_characters_read);
@@ -622,6 +626,18 @@ int string_pointer_shift(char** current_str_ptr, int n_chr_shft) {
 
     *current_str_ptr += n_chr_shft;
     return 0;
+}
+
+//----------------------------------------------------------------------------------------------------------------
+
+void comment_handle(char* current_str) {
+
+    char* comment_ptr = strrchr(current_str, ';');
+
+    if (comment_ptr != NULL) {
+
+        *comment_ptr = '\0';
+    }
 }
 
 //----------------------------------------------------------------------------------------------------------------

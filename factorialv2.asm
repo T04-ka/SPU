@@ -1,0 +1,41 @@
+PUSH 1
+POP A
+
+IN
+
+CALL : REC
+
+PUSH A
+OUT
+
+HALT
+
+
+
+: REC
+
+POP E
+PUSH E
+
+PUSH E
+PUSH A 
+MUL
+POP A
+
+PUSH 1
+JMPNE : .
+
+PUSH A
+MUL
+POP A
+JUMP : RETURN
+: .
+
+PUSH -1
+ADD
+
+CALL : REC
+
+
+: RETURN
+RET

@@ -3,7 +3,7 @@
 
 #include "./../../myformat.cpp"
 
-#define SPU_EXPANENT_COEFF 1000
+#define SPU_EXPANENT_COEFF 1
 
 #define ARGSZ 4
 #define CMDSZ 1
@@ -40,9 +40,10 @@ enum cmd_n
     cmd_n_POP       = 20,
     cmd_n_PUSHMR    = 21,
     cmd_n_POPMR     = 22,
+    cmd_n_IN        = 23,
 };
 
-const int CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT = 25;
+const int CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT = 26;
 
 struct cmd_t
 {
@@ -55,7 +56,7 @@ struct cmd_t
 
 #define SET_CMD(CMD, ARGQTY, TAG) {#CMD, cmd_n_ ##CMD, ARGQTY, TAG}
 
-const cmd_t CMD_L [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT] =
+const cmd_t CMD_L [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT - 2] =
     {
         SET_CMD(HALT, 0, 0),
         SET_CMD(PUSH, 1, 0),
@@ -80,6 +81,7 @@ const cmd_t CMD_L [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT]
         SET_CMD(POP, 1, 0),
         SET_CMD(PUSHMR, 1, 0),
         SET_CMD(POPMR, 1, 0),
+        SET_CMD(IN, 0, 0),
     };
 
 const int REG_N__NEVER_TOUCH_IT_AT_ALL_BLYAT = 5;

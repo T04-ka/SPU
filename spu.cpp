@@ -1,4 +1,5 @@
 
+#include <cmath>
 #define DEBUG
 #include <stdio.h>
 #include <stdlib.h>
@@ -74,14 +75,17 @@ int spu_pushr(spu_t* spu_t);
 
 int spu_popr(spu_t* spu_t);
 
-
 int spu_pushm(spu_t* spu_t);
+
 int spu_popm(spu_t* spu_t);
+
 int spu_pop(spu_t* spu_t);
+
 int spu_pushmr(spu_t* spu_t);
+
 int spu_popmr(spu_t* spu_t);
 
-
+int spu_in(spu_t* spu_t);
 
 //----------------------------------------------------------------------------------------------------------------
 
@@ -114,6 +118,7 @@ spu_opfnc_t* cmd_opfnc_t [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT
         spu_pop,
         spu_pushmr,
         spu_popmr,
+        spu_in,
     };
 
 
@@ -197,7 +202,7 @@ int spu_mul(spu_t* spu_t) {
     int var1 = 0, var2 = 0;
     STACK_POP(&spu_t->stk, &var1);
     STACK_POP(&spu_t->stk, &var2);
-    STACK_PUSH(&spu_t->stk, var2 * var1 / SPU_EXPANENT_COEFF);
+    STACK_PUSH(&spu_t->stk, var2 / SPU_EXPANENT_COEFF * var1);
 
     return 0;
 }
@@ -238,6 +243,8 @@ int spu_halt(spu_t* spu_t) {
 //УЧЕСТЬ ЧТО МЕТКА В 1000 раз больше
 int spu_jump(spu_t* spu_t) {
 
+    PC_INCR;
+
     int copied_arg = MEMCPY_ARG;
 
     spu_t->pc = copied_arg / SPU_EXPANENT_COEFF; // VOT TUT NAVERNOE
@@ -248,7 +255,7 @@ int spu_jump(spu_t* spu_t) {
 //----------------------------------------------------------------------------------------------------------------
 
 #define JUMP_IF(CMP)                                                    \
-PC_INCR;                                                            \
+PC_INCR;                                                                \
 int frst_chr = 0, scnd_chr = 0;                                         \
                                                                         \
 STACK_POP(&spu_t->stk, &scnd_chr);                                      \
@@ -456,6 +463,20 @@ int spu_popmr(spu_t* spu_t) {
     STACK_POP(&spu_t->stk, &spu_t->mem_buf[register_value]);
 
     spu_t->pc += ARGSZ;
+
+    return 0;
+}
+
+//----------------------------------------------------------------------------------------------------------------
+
+int spu_in(spu_t* spu_t) {
+
+    PC_INCR;
+
+    double in_value = NAN;
+    scanf("%lg", &in_value);
+
+    STACK_PUSH(&spu_t->stk, (int) in_value * SPU_EXPANENT_COEFF);
 
     return 0;
 }
