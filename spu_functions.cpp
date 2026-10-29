@@ -1,7 +1,6 @@
 //----------------------------------------------------------------------------------------------------------------
 
-void cmd_opfnc_t_init() {}
-
+#include "enum.h"
 #define GET_CMD(IND)    * ( (char*) spu_t->cmd_buf + IND )
 #define GET_ARG(IND)    * (int*)( (char*) spu_t->cmd_buf + IND )
 #define PC_INCR         spu_t->pc += CMDSZ
@@ -54,7 +53,7 @@ int spu_sub(spu_t* spu_t) {
     int var1 = 0, var2 = 0;
     STACK_POP(&spu_t->stk, &var1);
     STACK_POP(&spu_t->stk, &var2);
-    STACK_PUSH(&spu_t->stk, var2 - var1);
+    STACK_PUSH(&spu_t->stk, var1 - var2);
 
     return 0;
 }
@@ -85,7 +84,7 @@ int spu_mul(spu_t* spu_t) {
     int var1 = 0, var2 = 0;
     STACK_POP(&spu_t->stk, &var1);
     STACK_POP(&spu_t->stk, &var2);
-    STACK_PUSH(&spu_t->stk, var2 / SPU_EXPANENT_COEFF * var1);
+    STACK_PUSH(&spu_t->stk, var2 * var1 / SPU_EXPANENT_COEFF);
 
     return 0;
 }
@@ -304,7 +303,7 @@ int spu_pushm(spu_t* spu_t) {
 
     int copied_arg = MEMCPY_ARG;
 
-    STACK_PUSH(&spu_t->stk, spu_t->mem_buf[copied_arg]);
+    STACK_PUSH(&spu_t->stk, spu_t->mem_buf[copied_arg / SPU_EXPANENT_COEFF]);
 
     spu_t->pc += ARGSZ;
 
@@ -321,7 +320,7 @@ int spu_popm(spu_t* spu_t) {
 
     int copied_arg = MEMCPY_ARG;
 
-    STACK_POP(&spu_t->stk, &spu_t->mem_buf[copied_arg]);
+    STACK_POP(&spu_t->stk, &spu_t->mem_buf[copied_arg / SPU_EXPANENT_COEFF]);
 
     spu_t->pc += ARGSZ;
 
@@ -339,7 +338,7 @@ int spu_pop(spu_t* spu_t) {
     int copied_arg = MEMCPY_ARG;
 
     int useless_var_for_pop = 0;
-    for (int i = 0; i < copied_arg; i++) {
+    for (int i = 0; i < copied_arg / SPU_EXPANENT_COEFF; i++) {
 
         STACK_POP(&spu_t->stk, &useless_var_for_pop);
     }
@@ -359,7 +358,7 @@ int spu_pushmr(spu_t* spu_t) {
 
     int copied_arg = MEMCPY_ARG;
 
-    int register_value = spu_t->reg_buf[copied_arg];
+    int register_value = spu_t->reg_buf[copied_arg / SPU_EXPANENT_COEFF] / SPU_EXPANENT_COEFF;
 
     STACK_PUSH(&spu_t->stk, spu_t->mem_buf[register_value]);
 
@@ -378,7 +377,7 @@ int spu_popmr(spu_t* spu_t) {
 
     int copied_arg = MEMCPY_ARG;
 
-    int register_value = spu_t->reg_buf[copied_arg];
+    int register_value = spu_t->reg_buf[copied_arg / SPU_EXPANENT_COEFF] / SPU_EXPANENT_COEFF;
 
     STACK_POP(&spu_t->stk, &spu_t->mem_buf[register_value]);
 
@@ -423,22 +422,24 @@ int spu_sqrt(spu_t* spu_t) {
 }
 
 //----------------------------------------------------------------------------------------------------------------
+// TODO: сначала писать память в буффер, а потом скидывать в консоль
+int spu_draw(spu_t* spu_t);
 
 int spu_draw(spu_t* spu_t) {
 
     PC_INCR;
 
-    int window_width = spu_t->reg_buf[RWDTH];
-    int memory_first_index = spu_t->reg_buf[RMFI];
-    int memory_draw_size = spu->reg_buf[RMDSZ];
+    int window_width = spu_t->reg_buf[RDW] / SPU_EXPANENT_COEFF;
+    int memory_first_index = spu_t->reg_buf[RMFI] / SPU_EXPANENT_COEFF;
+    int memory_draw_size = spu_t->reg_buf[RMDSZ] / SPU_EXPANENT_COEFF;
 
-    for (int port = 0; port < memory_draw_size / window_width; port++) {
+    for (int port = 0; port < memory_draw_size / window_width + 1; port++) {
 
-        for (int p = window_size * port; p < window_width * (port + 1); p++) {
+        for (int p = window_width * port; p < window_width * (port + 1); p++) {
 
-            if (spu_t->mem_buf[p]) {
+            if (spu_t->mem_buf[memory_first_index + p]) {
 
-                putc('0', stderr);
+                putc('Z', stderr);
             }
             else {
 
@@ -446,10 +447,11 @@ int spu_draw(spu_t* spu_t) {
             }
         }
         putc('\n', stderr);
-
     }
 
+    return 0;
 }
+
 #undef GET_CMD
 #undef GET_ARG
 #undef PC_INCR
@@ -488,6 +490,7 @@ spu_opfnc_t* cmd_opfnc_t [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT
         spu_popmr,
         spu_in,
         spu_sqrt,
+        spu_draw,
     };
 
 //----------------------------------------------------------------------------------------------------------------

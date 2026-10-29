@@ -7,7 +7,7 @@
 
 //----------------------------------------------------------------------------------------------------------------
 
-#define SPU_EXPANENT_COEFF 1
+#define SPU_EXPANENT_COEFF 100
 
 #define ARGSZ 4
 #define CMDSZ 1
@@ -105,7 +105,7 @@ const cmd_t CMD_L [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT 
 
 //----------------------------------------------------------------------------------------------------------------
 
-const int REG_N__NEVER_TOUCH_IT_AT_ALL_BLYAT = 8;
+const int REG_N__NEVER_TOUCH_IT_AT_ALL_BLYAT = 9;
 enum reg_n
 {
     RAX     = 0,
@@ -114,8 +114,9 @@ enum reg_n
     RDDLX   = 3,
     REX     = 4,
     RMFI    = 5,
-    RMSZ    = 6,
-    RWDTH   = 7,
+    RMDSZ   = 6,
+    RDW     = 7,
+    RDH     = 8,
 };
 
 const char * const REGISTER_LIST[REG_N__NEVER_TOUCH_IT_AT_ALL_BLYAT] =
@@ -127,7 +128,8 @@ const char * const REGISTER_LIST[REG_N__NEVER_TOUCH_IT_AT_ALL_BLYAT] =
         "REX",
         "RMFI",
         "RMDSZ",
-	    "RWDTH",
+	    "RDW",
+		"RDH",
     };
 
 //----------------------------------------------------------------------------------------------------------------

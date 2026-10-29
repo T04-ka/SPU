@@ -1,0 +1,2 @@
+./assembler.sh
+ ./spu.sh

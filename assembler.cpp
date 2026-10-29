@@ -248,6 +248,8 @@ asm_err_t compile(asm_data_t* asm_data_ptr) {
         comment_handle(current_str);
 
         if (is_onlyspace({.str = current_str, .len = (int) strlen(current_str) + 1})) continue;
+        // $;
+        // $s(current_str);
 
         // $s(current_str);
         int command_number = command_handle(asm_data_ptr, &current_str); // передавать это в хандлеры
@@ -632,7 +634,8 @@ int string_pointer_shift(char** current_str_ptr, int n_chr_shft) {
 
 void comment_handle(char* current_str) {
 
-    char* comment_ptr = strrchr(current_str, ';');
+    // $std("=\nbefore comment find: |%s|\n", current_str);
+    char* comment_ptr = strchr(current_str, ';');
 
     if (comment_ptr != NULL) {
 

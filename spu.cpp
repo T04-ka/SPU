@@ -56,8 +56,6 @@ void cmd_opfnc_t_init();
 
 int main(int argc, char** argv) {
 
-    cmd_opfnc_t_init();
-
     spu_t spu_t = {};
     spu_t_ctor(&spu_t, argc, argv);
 
