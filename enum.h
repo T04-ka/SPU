@@ -1,17 +1,29 @@
 #ifndef ENUM_H
 #define ENUM_H
 
+//----------------------------------------------------------------------------------------------------------------
+
 #include "./../../myformat.cpp"
+
+//----------------------------------------------------------------------------------------------------------------
 
 #define SPU_EXPANENT_COEFF 1
 
 #define ARGSZ 4
 #define CMDSZ 1
+#define SIGNA_SIZE 8
+#define ADMIN_DATA_SIZE 4
+
+//----------------------------------------------------------------------------------------------------------------
 
 const int MEMORY_SIZE__NE_TROGAI_EGO_ONO_TEBYA_SOJRET = 1048576;
 
+//----------------------------------------------------------------------------------------------------------------
+
 // const char SIGNATURE___TOUCH_ONLY_IF_YOU_DONT_AFRAID_OF_THE_CONSEQUENSES[] = {'Y', 'A', 'S', 'H', 'A', '4', 'M', 'O'};
 const unsigned long SIGNATURE___TOUCH_ONLY_IF_YOU_DONT_AFRAID_OF_THE_CONSEQUENSES[] = {0x4f4d344148534159};
+
+//----------------------------------------------------------------------------------------------------------------
 
 enum cmd_n
 {
@@ -42,9 +54,12 @@ enum cmd_n
     cmd_n_POPMR     = 22,
     cmd_n_IN        = 23,
     cmd_n_SQRT      = 24,
+    cmd_n_DRAW      = 25,
 };
 
-const int CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT = 27;
+const int CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT = 28;
+
+//----------------------------------------------------------------------------------------------------------------
 
 struct cmd_t
 {
@@ -54,9 +69,9 @@ struct cmd_t
     bool    label;
 };
 
+//----------------------------------------------------------------------------------------------------------------
 
 #define SET_CMD(CMD, ARGQTY, TAG) {#CMD, cmd_n_ ##CMD, ARGQTY, TAG}
-
 const cmd_t CMD_L [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT - 2] =
     {
         SET_CMD(HALT, 0, 0),
@@ -84,9 +99,24 @@ const cmd_t CMD_L [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT 
         SET_CMD(POPMR, 1, 0),
         SET_CMD(IN, 0, 0),
         SET_CMD(SQRT, 0, 0),
+        SET_CMD(DRAW, 0, 0),
     };
+#undef SET_CMD
 
-const int REG_N__NEVER_TOUCH_IT_AT_ALL_BLYAT = 5;
+//----------------------------------------------------------------------------------------------------------------
+
+const int REG_N__NEVER_TOUCH_IT_AT_ALL_BLYAT = 8;
+enum reg_n
+{
+    RAX     = 0,
+    RBX     = 1,
+    RCX     = 2,
+    RDDLX   = 3,
+    REX     = 4,
+    RMFI    = 5,
+    RMSZ    = 6,
+    RWDTH   = 7,
+};
 
 const char * const REGISTER_LIST[REG_N__NEVER_TOUCH_IT_AT_ALL_BLYAT] =
     {
@@ -95,8 +125,11 @@ const char * const REGISTER_LIST[REG_N__NEVER_TOUCH_IT_AT_ALL_BLYAT] =
         "RCX",
         "RDDLX",
         "REX",
+        "RMFI",
+        "RMDSZ",
+	    "RWDTH",
     };
 
-//#include "zhr_pdr.h"
+//----------------------------------------------------------------------------------------------------------------
 
 #endif

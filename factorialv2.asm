@@ -12,10 +12,10 @@ HALT
 
 
 
+; ===============================================
 : REC
 
 POP REX
-
 PUSH REX
 
 PUSH REX
@@ -24,19 +24,18 @@ MUL
 POP RAX
 
 PUSH 1
-JMPNE : .
-
-PUSH RAX
-MUL
-POP RAX
-JUMP : RETURN
-: .
+JMPNE : .	 ; if n == 0
+	PUSH RAX
+	MUL
+	POP RAX
+	JUMP : RETURN
+: .	 	 ; endif
 
 PUSH -1
 ADD
 
 CALL : REC
 
-
 : RETURN
 RET
+; ===============================================

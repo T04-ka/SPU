@@ -1,5 +1,5 @@
 
-#include <cmath>
+
 #define DEBUG
 #include <stdio.h>
 #include <stdlib.h>
@@ -195,8 +195,6 @@ void spu_err_print(spu_t spu_t) {
 }
 
 //----------------------------------------------------------------------------------------------------------------
-#define SIGNA_SIZE 8
-#define ADMIN_DATA_SIZE 4
 int spu_t_ctor(spu_t* spu_t, int argc, char** argv) {
 
     STACK_CTOR(spu_t->stk, 4);
