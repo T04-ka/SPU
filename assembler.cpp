@@ -42,13 +42,6 @@ str_t ASM_ERR_MSG_L[] = {
     "Such a label doesn't exist",
 };
 
-const char REG_NAME_L[] = {
-    'A',
-    'B',
-    'C',
-    'D',
-    'E',
-};
 
 enum arg_def_ret_t
 {
@@ -166,7 +159,7 @@ int main(int argc, char** argv) {
 void errlog(asm_err_t err_t) {
 
     fprintf(stderr, FAT"%s:%d: " RED"Syntax error: " DEF"%s.\n", err_t.flnm, err_t.nln + 1, ASM_ERR_MSG_L[err_t.errnum]);
-    fprintf(stderr, "%5d | %s\n%5s |\n", err_t.nln, err_t.str, "");
+    fprintf(stderr, "%5d | %s\n%5s |\n", err_t.nln + 1, err_t.str, "");
 }
 
 //----------------------------------------------------------------------------------------------------------------
@@ -191,7 +184,7 @@ int skipn_spaces(const char* str, const char** str_ptr, int n) {
     // fprintf(stderr, "str = |%s|\n", str);
     int i = 0;
     // $d(n);
-    for (i = 0; i < n && str[i] == ' ' && str[i] != '\0' && str[i] != EOF; i++) {
+    for (i = 0; i < n && isspace(str[i]) && str[i] != '\0' && str[i] != EOF; i++) {
 
     }
 
@@ -246,12 +239,10 @@ int find_label_name_in_buf(asm_data_t* asm_data_ptr, char* label_name);
 
 asm_err_t compile(asm_data_t* asm_data_ptr) {
 
-
     int nln = 0;
-    // $d(asm_data_ptr->inp_file_data.nlns);
+
     for (nln = 0; nln < asm_data_ptr->inp_file_data.nlns; nln++) {
 
-        // $std("\n");
         char* current_str = asm_data_ptr->inp_file_data.prsdbffr[nln].str;
 
         comment_handle(current_str);
@@ -267,8 +258,6 @@ asm_err_t compile(asm_data_t* asm_data_ptr) {
             RETURN_ERROR(asm_err_WRONG_CMD);
         }
 
-        // $;
-
         if (command_number == cmd_n_LABEL) {
 
             asm_err_n errnum = command_as_label_handle(asm_data_ptr, &current_str);
@@ -276,8 +265,6 @@ asm_err_t compile(asm_data_t* asm_data_ptr) {
 
             RETURN_IF_END_EMPTY;
         }
-
-        // $;
 
         if (command_number == (int) cmd_n_PUSH || command_number == (int) cmd_n_POP) {
             // $;
@@ -301,11 +288,6 @@ asm_err_t compile(asm_data_t* asm_data_ptr) {
             asm_err_n errnum = default_argument_handle(asm_data_ptr, &current_str);
             if (errnum) RETURN_ERROR(errnum);
         }
-//
-//         $s(current_str);
-//
-//         $d( is_onlyspace({.str = current_str, .len = (int) strlen(current_str) + 1}) );
-
 
         RETURN_IF_END_EMPTY;
     }
@@ -362,9 +344,13 @@ cmd_n command_handle(asm_data_t* asm_data_ptr, char** current_str_ptr) {
 
 int reg_arg_handle(char** current_str_ptr) {
 
+    int nchrrd = read_one_command(current_str_ptr);
+
     for (int regn = 0; regn < REG_N__NEVER_TOUCH_IT_AT_ALL_BLYAT; regn++) {
 
-        if ((*current_str_ptr)[0] == REGISTER_LIST[regn]) {
+        // $err("strcmp(%s, %s) = %d\n", *current_str_ptr, REGISTER_LIST[regn], strcmp((*current_str_ptr), REGISTER_LIST[regn]));
+
+        if (!strncmp((*current_str_ptr), REGISTER_LIST[regn], (size_t) nchrrd)) {
 
             return regn;
         }
@@ -392,11 +378,16 @@ asm_err_n push_and_pop_argument_handle(asm_data_t* asm_data_ptr, char** current_
 
     bool is_mem = false;
     // $s(*current_str_ptr);
+    //
+    char str_between_squared_brkts[MAX_STR_LEN + 1] = {};
+    char* str_between_squared_brkts_ptr = &str_between_squared_brkts[0];
+
+    int regn = -1;
+
     if ((*current_str_ptr)[0] == '[') {
         // $;
         is_mem = true;
 
-        char str_between_squared_brkts[MAX_STR_LEN + 1] = {};
         sscanf(*current_str_ptr, "[%" MAX_STR_LEN_STR "[^];]%n", str_between_squared_brkts, &number_of_characters_read);
 
         // $s(*current_str_ptr);
@@ -408,10 +399,13 @@ asm_err_n push_and_pop_argument_handle(asm_data_t* asm_data_ptr, char** current_
         }
 
         string_pointer_shift(current_str_ptr, 1);
-    }
-    // $s(*current_str_ptr);
-    int regn = reg_arg_handle(current_str_ptr);
 
+        regn = reg_arg_handle(&str_between_squared_brkts_ptr);
+    }
+    else {
+
+        regn = reg_arg_handle(current_str_ptr);
+    }
     if (regn != -1) {
 
         if (is_mem) {
@@ -423,7 +417,7 @@ asm_err_n push_and_pop_argument_handle(asm_data_t* asm_data_ptr, char** current_
             cmd_number = (cmd_number == cmd_n_PUSH) ? cmd_n_PUSHR : cmd_n_POPR;
         }
 
-        string_pointer_shift(current_str_ptr, 1);
+        string_pointer_shift(current_str_ptr, strlen(REGISTER_LIST[regn]));
 
         PC_INCR;
         asm_data_ptr->number_of_cmnds ++;
@@ -470,16 +464,20 @@ asm_err_n command_as_label_handle(asm_data_t* asm_data_ptr, char** current_str_p
         return asm_err_NO_ERR;
     }
 
-    if (strlen(*current_str_ptr) != number_of_characters_read) {
+    if (!is_onlyspace({.str = *current_str_ptr + number_of_characters_read, .len = (int) strlen(*current_str_ptr + number_of_characters_read)})) {
 
         return asm_err_WRONG_LABEL;
     }
+
+    *(*current_str_ptr + number_of_characters_read) = '\0';
+
+    $s(*current_str_ptr);
 
     char* label_name = *current_str_ptr;
 
     int label_number = find_label_name_in_buf(asm_data_ptr, label_name);
     if (label_number != -1) {
-        $d(label_number);
+        // $d(label_number);
         return asm_err_LABEL_REDFNTN; //REDEFINITION OF LABEL
     }
 
@@ -509,6 +507,8 @@ asm_err_n argument_as_label_handle(asm_data_t* asm_data_ptr, char** current_str_
 
         number_of_characters_read = read_one_command(current_str_ptr);
     }
+
+    *(*current_str_ptr + number_of_characters_read) = '\0';
 
     char* label_name = *current_str_ptr;
     int label_number = find_label_name_in_buf(asm_data_ptr, label_name);

@@ -41,9 +41,10 @@ enum cmd_n
     cmd_n_PUSHMR    = 21,
     cmd_n_POPMR     = 22,
     cmd_n_IN        = 23,
+    cmd_n_SQRT      = 24,
 };
 
-const int CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT = 26;
+const int CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT = 27;
 
 struct cmd_t
 {
@@ -82,17 +83,18 @@ const cmd_t CMD_L [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT 
         SET_CMD(PUSHMR, 1, 0),
         SET_CMD(POPMR, 1, 0),
         SET_CMD(IN, 0, 0),
+        SET_CMD(SQRT, 0, 0),
     };
 
 const int REG_N__NEVER_TOUCH_IT_AT_ALL_BLYAT = 5;
 
-const char REGISTER_LIST[REG_N__NEVER_TOUCH_IT_AT_ALL_BLYAT] =
+const char * const REGISTER_LIST[REG_N__NEVER_TOUCH_IT_AT_ALL_BLYAT] =
     {
-        'A',
-        'B',
-        'C',
-        'D',
-        'E',
+        "RAX",
+        "RBX",
+        "RCX",
+        "RDDLX",
+        "REX",
     };
 
 //#include "zhr_pdr.h"
