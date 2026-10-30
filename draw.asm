@@ -10,7 +10,7 @@ POP RDW
 PUSH 40
 POP RDH
 
-PUSH 2.4
+PUSH 0.4
 POP RCX     ; RCX = higth / width
 
 PUSH RDH
@@ -51,11 +51,9 @@ POP RBX         ; y = 0
         PUSH RBX
         PUSH RDW
         MUL
-        PUSH RCX
         PUSH RAX
-        MUL
         ADD
-        POP REX         ; REX = y * width + x * RCX
+        POP REX         ; REX = y * width + x
 
         ; begin if      ;
         CALL : IS_VALID ;
@@ -103,13 +101,18 @@ MUL     ; R^2
 
 PUSH 20
 PUSH RAX
+PUSH RCX
+MUL
 SUB
 
 PUSH 20
 PUSH RAX
+PUSH RCX
+MUL
 SUB
 
-MUL     ; (x - 25)^2
+MUL     ; (RCX * x - 20)^2
+
 
 
 PUSH 20
@@ -120,10 +123,10 @@ PUSH 20
 PUSH RBX
 SUB
 
-MUL     ; (y - 25)^2
+MUL     ; (y - 20)^2
 
-ADD     ; (y - 25)^2 + (x - 25)^2
-JMPGE : if2     ; if R^2 == (y-25)^2 + (x-25)^2
+ADD     ; (y - 20)^2 + (RCX * x - 20)^2
+JMPLE : if2     ; if R^2<=(y-25)^2 + (x-25)^2
 ; if
     PUSH 1
     JUMP : else2
