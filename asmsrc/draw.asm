@@ -95,9 +95,9 @@ RET
 ; ================================================
 : IS_VALID
 
-PUSH 15 ; R of circle = 5
-PUSH 15
-MUL     ; R^2
+PUSH 1
+
+PUSH 225
 
 PUSH 20
 PUSH RAX
@@ -112,8 +112,10 @@ MUL
 SUB
 
 MUL     ; (RCX * x - 20)^2
+DIV
 
 
+PUSH 100
 
 PUSH 20
 PUSH RBX
@@ -124,9 +126,10 @@ PUSH RBX
 SUB
 
 MUL     ; (y - 20)^2
+DIV
 
 ADD     ; (y - 20)^2 + (RCX * x - 20)^2
-JMPLE : if2     ; if R^2<=(y-25)^2 + (x-25)^2
+JMPGE : if2     ; if R^2<=(y-25)^2 + (x-25)^2
 ; if
     PUSH 1
     JUMP : else2

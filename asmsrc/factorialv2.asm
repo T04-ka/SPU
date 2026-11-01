@@ -15,14 +15,6 @@ HALT
 ; ===============================================
 : REC
 
-POP REX
-PUSH REX
-
-PUSH REX
-PUSH RAX
-MUL
-POP RAX
-
 PUSH 1
 JMPNE : .	 ; if n == 0
 	PUSH RAX
@@ -31,11 +23,19 @@ JMPNE : .	 ; if n == 0
 	JUMP : RETURN
 : .	 	 ; endif
 
+POP REX
+PUSH REX
+
+PUSH REX
+
 PUSH -1
 ADD
 
 CALL : REC
 
+PUSH RAX
+MUL
+POP RAX
 : RETURN
 RET
 ; ===============================================

@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "./../Stack/Stack_int/stack.h"
+#include "./../../Stack/Stack_int/stack.h"
 #include "enum.h"
 
 #define LOGFL stderr
@@ -210,14 +210,14 @@ int spu_t_ctor(spu_t* spu_t, int argc, char** argv) {
     void* signa_arr = calloc(1, SIGNA_SIZE + 2 * ADMIN_DATA_SIZE);
 
     fread(signa_arr, 16, 1, cmd_list_fl);
-
+// TODO: сделать выхд ретерном при неправильной сигнатуре
     if (*(unsigned long*) signa_arr != *SIGNATURE___TOUCH_ONLY_IF_YOU_DONT_AFRAID_OF_THE_CONSEQUENSES) {
 
         fprintf(stderr, RED FAT "CHE ZA GOVNO TI MNE PODSUNUL? IDI COMPILIRUI NORMAL'NO. PIDOR.\n" DEF);
         return 1;
     }
-
-    spu_t->cmd_qty = (size_t) *( (char*) signa_arr + 2 * 4 );
+    // TODO: согнуть всю сигнатуру в структуру
+    spu_t->cmd_qty = (size_t) *( (char*) signa_arr + 2 * ADMIN_DATA_SIZE );
     spu_t->cmd_buf_size = (size_t) *((int*) signa_arr + 3);
 
     spu_t->cmd_buf = calloc(spu_t->cmd_buf_size, 1);
