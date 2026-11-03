@@ -15,7 +15,7 @@ My assembly language includes commands, which you can see in section [Assembly c
 ## Usage
 1. Download the archive from [the last page of the release](https://github.com/T04-ka/SPU/releases/tag/yasha_pidor).
 2. Extract the contents of the archive to a path that does not contain Russian characters or special symbols.
-3. Make your own assembly source and save it with .asm extension. Use only permitted [assembly commands](#assembly_commands).
+3. Make your own assembly source and save it with .asm extension. Use only permitted [assembly commands](#assembler_commands).
 4. Compile your .asm source with command
 ```text
 ./assembler asmsrc.asm
@@ -28,8 +28,9 @@ My assembly language includes commands, which you can see in section [Assembly c
 ```
 6. Here you are.
 
-## Assembler
+## Assembler commands
 
+Below are all possible assembler commands.
 
 | Command name | Bytecode | Hex code | Need an argument | Need a label | Description                                                                |
 |--------------|----------|----------|------------------|--------------|----------------------------------------------------------------------------|
@@ -53,3 +54,35 @@ My assembly language includes commands, which you can see in section [Assembly c
 | IN           | 23       | 0X0017   | NO               | NO           | Pushes number from input stream to stack                                   |
 | SQRT         | 24       | 0X0018   | NO               | NO           | Takes the square root of the last number                                   |
 | DRAW         | 25       | 0X0019   | NO               | NO           | Displays memory in graphical form                                          |
+
+### Something else about assembler syntax
+* Put a ';' symbol to make the source line after it non-readble for compiler (make a comment)
+* You can set labels for some commands (that need a label, see the table above), just put symbol ':' in start of source line
+* To put a label as a argument to command, put ':' symbol and then write label name
+* You can add empty lines and spaces to make well-readble formatting
+* To access a register cell, (for PUSH and POP), just write one of register names (see [section about registers](#registers))
+* To access a memory cell (again for PUSH and POP), put argument in square brackets (whether it’s a constant number or a register)
+
+## Assembler
+Assembler compiles .asm source in 2 passes, in first pass it makes buffer with all labels, and with second pass, he writes <kbd>asmlistfl.txt</kbd> and <kbd>code.bin</kbd> files. 
+<kbd>asmlistfl.txt</kbd> is an assembly listing for your program, usefull programm to debug. <kbd>code.bin</kbd> is an executable file for virtual machine. **DO NOT TRY TO RUN SPU WITH .bin FILE, MAKED NOT BY ASSEMBLER!!!**
+
+## Jump
+Jumps are very interesting commands. JUMP definitely jumps in code buffer, but actually it only changes PC value. Conditional jumps work by next way: it popes 2 last numbers from stack, compares them, and jump upon fulfillment of the condition. All of jumps compare nubers in dirrect order. 
+FE, below JUMP jumpes if RAX greater than 10:
+```text
+PUSH RAX
+PUSH 10
+JMPG : RODIPAHSAY
+```
+After comparing, only second-to-last number will be pushed back to stack.
+
+
+* Yasha is loh.
+<p align="center">
+  <img width="954" height="474" alt="image" src="https://github.com/user-attachments/assets/e69305ba-582a-44a9-bdbd-27cdb2260609" />
+</p>
+
+<h1 align="center">
+  🆁🅰🅳🅸 🅽🅴🅴......
+</h1>
