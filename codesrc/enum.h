@@ -25,13 +25,18 @@ const unsigned long SIGNATURE___TOUCH_ONLY_IF_YOU_DONT_AFRAID_OF_THE_CONSEQUENSE
 
 //----------------------------------------------------------------------------------------------------------------
 
-struct
+union Bit_flags
 {
-    unsigned int cmd    : 5;
-    unsigned int cnst   : 1;
-    unsigned int reg    : 1;
-    unsigned int mem    : 1;
-} cmd_flags;
+    unsigned char val;
+
+    struct
+    {
+        unsigned cmd  : 5;
+        unsigned cnst : 1;
+        unsigned reg  : 1;
+        unsigned mem  : 1;
+    } bits;
+};
 
 //----------------------------------------------------------------------------------------------------------------
 

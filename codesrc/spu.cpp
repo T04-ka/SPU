@@ -1,5 +1,6 @@
 
 
+#include <complex>
 #define DEBUG
 #include <stdio.h>
 #include <stdlib.h>
@@ -77,71 +78,34 @@ int main(int argc, char** argv) {
 
 //----------------------------------------------------------------------------------------------------------------
 
-//TODO: Сделать через union
 void command_handle(spu_t* spu_t) {
-    char code_buf_data = *( (char*) spu_t->cmd_buf + spu_t->pc );
 
-    // $;
+    Bit_flags u_code_buf_data = {*( (unsigned char*) spu_t->cmd_buf + spu_t->pc )};
     spu_t->pc ++;
-    // $d(code_buf_data);
-    char func_n = code_buf_data & 0b00011111;
-    // char func_n = code_buf_data_struct.cmd
 
-    switch (code_buf_data & 0b11100000) {
+    if (u_code_buf_data.bits.cnst) {
 
-        case 0b00100000:
-        {
-            // push
-            // $;
-            spu_t->argument = (int*) ((char*) spu_t->cmd_buf + spu_t->pc);
-            break;
-        }
+         spu_t->argument = (int*) ((char*) spu_t->cmd_buf + spu_t->pc);
+    }
+    else if (u_code_buf_data.bits.reg) {
 
-        case 0b01000000:
-        {
-            // pushr
-            int copied_arg = 0;
-            memcpy(&copied_arg, (char*) spu_t->cmd_buf + spu_t->pc, sizeof(int));
-            spu_t->argument = &spu_t->reg_buf[ copied_arg / SPU_EXPANENT_COEFF ];
-            break;
-        }
+        int copied_arg = 0;
+        memcpy(&copied_arg, (char*) spu_t->cmd_buf + spu_t->pc, sizeof(int));
+        spu_t->argument = &spu_t->reg_buf[ copied_arg / SPU_EXPANENT_COEFF ];
+    }
+    else {
 
-        case 0b10100000:
-        {
-            // pushm
-            int copied_arg = 0;
-            memcpy(&copied_arg, (char*) spu_t->cmd_buf + spu_t->pc, sizeof(int));
-            spu_t->argument = &spu_t->mem_buf[ copied_arg / SPU_EXPANENT_COEFF ];
-            break;
-        }
-
-        case 0b11000000:
-        {
-            // pushmr
-            int copied_arg = 0;
-            memcpy(&copied_arg, (char*) spu_t->cmd_buf + spu_t->pc, sizeof(int));
-            int register_value = spu_t->reg_buf[ copied_arg / SPU_EXPANENT_COEFF ] / SPU_EXPANENT_COEFF;
-            spu_t->argument = &spu_t->mem_buf[register_value];
-            break;
-        }
-
-        default:
-        {
-            spu_t->argument = NULL;
-        }
+        spu_t->argument = NULL;
     }
 
-    // $d(func_n);
-    // $d(spu_t->pc);
-    cmd_opfnc_t [func_n] (spu_t);
-    // $d(func_n);
-    // $;
-    // $d(func_n);
-    // $d(code_buf_data & cmd_flags.mem);
-    // $d(code_buf_data & cmd_flags.cnst);
-    // $d(code_buf_data & cmd_flags.reg);
-    // spu_dump(spu_t, __FILE__, __LINE__);
-    // $d(*( (char*) spu_t.cmd_buf + spu_t.pc ));
+    if (u_code_buf_data.bits.mem) {
+
+        int argument_val = 0;
+        memcpy(&argument_val, spu_t->argument, sizeof(int));
+        spu_t->argument = &spu_t->mem_buf[ argument_val / SPU_EXPANENT_COEFF];
+    }
+
+    cmd_opfnc_t [u_code_buf_data.bits.cmd] (spu_t);
 }
 
 //----------------------------------------------------------------------------------------------------------------
