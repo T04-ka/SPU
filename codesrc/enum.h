@@ -30,6 +30,7 @@ struct
     unsigned int cmd    : 5;
     unsigned int cnst   : 1;
     unsigned int reg    : 1;
+    unsigned int mem    : 1;
 } cmd_flags;
 
 //----------------------------------------------------------------------------------------------------------------

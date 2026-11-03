@@ -85,6 +85,7 @@ void command_handle(spu_t* spu_t) {
     spu_t->pc ++;
     // $d(code_buf_data);
     char func_n = code_buf_data & 0b00011111;
+    // char func_n = code_buf_data_struct.cmd
 
     switch (code_buf_data & 0b11100000) {
 
