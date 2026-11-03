@@ -1,1 +1,1 @@
- g+++ -o ./../spu spu.cpp ./../../Stack/Stack_int/stack.cpp 
+ g+++ -o ./../spu spu.cpp ./Stack/Stack_int/stack.cpp 

@@ -1,12 +1,11 @@
 
 
-#include <complex>
 #define DEBUG
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "./../../Stack/Stack_int/stack.h"
+#include "./Stack/Stack_int/stack.h"
 #include "enum.h"
 
 #define LOGFL stderr

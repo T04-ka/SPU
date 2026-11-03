@@ -1,11 +1,11 @@
 #define DEBUG
-#include "./../../../myformat.cpp"
+#include "./myformat.cpp"
 
-#include "./../../Onegin/strfuncs.h"
-#include "./../../Onegin/io.h"
+#include "./Onegin/strfuncs.h"
+#include "./Onegin/io.h"
 
-#include "./../../Stack/Stack_ptr/stack_ptr.h"
-#include "./../../Stack/Stack_int/stack.h"
+#include "./Stack/Stack_ptr/stack_ptr.h"
+#include "./Stack/Stack_int/stack.h"
 
 #include "enum.h"
 
