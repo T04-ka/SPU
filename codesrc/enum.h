@@ -25,7 +25,7 @@ const unsigned long SIGNATURE___TOUCH_ONLY_IF_YOU_DONT_AFRAID_OF_THE_CONSEQUENSE
 
 //----------------------------------------------------------------------------------------------------------------
 
-union Bit_flags
+union U_bit_flags
 {
     unsigned char val;
 

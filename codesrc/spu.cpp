@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
 
 void command_handle(spu_t* spu_t) {
 
-    Bit_flags u_code_buf_data = {*( (unsigned char*) spu_t->cmd_buf + spu_t->pc )};
+    U_bit_flags u_code_buf_data = {*( (unsigned char*) spu_t->cmd_buf + spu_t->pc )};
     spu_t->pc ++;
 
     if (u_code_buf_data.bits.cnst) {

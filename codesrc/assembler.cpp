@@ -366,19 +366,19 @@ int reg_arg_handle(char** current_str_ptr) {
 #define MAX_STR_LEN     30
 #define MAX_STR_LEN_STR "30"
 
-#define SKIP_LAST_BRACKET if (is_mem) {         \
-                                                \
-    read_one_command(current_str_ptr);          \
-    string_pointer_shift(current_str_ptr, 1);   \
+#define SKIP_LAST_BRACKET if (u_cmd_number.bits.mem) {  \
+                                                        \
+    read_one_command(current_str_ptr);                  \
+    string_pointer_shift(current_str_ptr, 1);           \
 }
 
 //----------------------------------------------------------------------------------------------------------------
 
 asm_err_n push_and_pop_argument_handle(asm_data_t* asm_data_ptr, char** current_str_ptr, cmd_n cmd_number) {
 
+    U_bit_flags u_cmd_number = {(unsigned char) cmd_number};
     int number_of_characters_read = read_one_command(current_str_ptr);
 
-    bool is_mem = false;
     // $s(*current_str_ptr);
     //
     char str_between_squared_brkts[MAX_STR_LEN + 1] = {};
@@ -388,7 +388,7 @@ asm_err_n push_and_pop_argument_handle(asm_data_t* asm_data_ptr, char** current_
 
     if ((*current_str_ptr)[0] == '[') {
         // $;
-        is_mem = true;
+        u_cmd_number.bits.mem = 1;
 
         sscanf(*current_str_ptr, "[%" MAX_STR_LEN_STR "[^];]%n", str_between_squared_brkts, &number_of_characters_read);
 
@@ -409,26 +409,37 @@ asm_err_n push_and_pop_argument_handle(asm_data_t* asm_data_ptr, char** current_
         regn = reg_arg_handle(current_str_ptr);
     }
 
-    if (regn != -1) {
+    if (regn == -1) {
 
-        if (is_mem) {
+        u_cmd_number.bits.cnst = 1;
 
-            // cmd_number = (cmd_number == cmd_n_PUSH) ? cmd_n_PUSHMR : cmd_n_POPMR; // тут пуш/поп регистр память
-            cmd_number = (cmd_n) (((char) cmd_number) | 0b11000000);
+        if (cmd_number == cmd_n_POP && !u_cmd_number.bits.mem) {
+
+            return asm_err_WRONG_ARG;
         }
-        else {
+    }
+    else {
 
-            // cmd_number = (cmd_number == cmd_n_PUSH) ? cmd_n_PUSHR : cmd_n_POPR; // тут пуш поп регистра
-            $std("%b\n", cmd_number);
-            cmd_number = (cmd_n) (((char) cmd_number) | 0b01000000);
-            $std("%b\n", cmd_number);
-        }
+        u_cmd_number.bits.reg = 1;
+
+//         if (is_mem) {
+//
+//             // cmd_number = (cmd_number == cmd_n_PUSH) ? cmd_n_PUSHMR : cmd_n_POPMR; // тут пуш/поп регистр память
+//             cmd_number = (cmd_n) (((char) cmd_number) | 0b11000000);
+//         }
+//         else {
+//
+//             // cmd_number = (cmd_number == cmd_n_PUSH) ? cmd_n_PUSHR : cmd_n_POPR; // тут пуш поп регистра
+//             // $std("%b\n", cmd_number);
+//             cmd_number = (cmd_n) (((char) cmd_number) | 0b01000000);
+//             // $std("%b\n", cmd_number);
+//         }
 
         string_pointer_shift(current_str_ptr, strlen(REGISTER_LIST[regn]));
 
         PC_INCR;
         asm_data_ptr->number_of_cmnds ++;
-        write_command(asm_data_ptr, cmd_number, CMD);
+        write_command(asm_data_ptr, u_cmd_number.val, CMD);
 
         asm_data_ptr->pc += ARGSZ;
         write_command(asm_data_ptr, SPU_EXPANENT_COEFF * regn, NONCMD);
@@ -438,23 +449,9 @@ asm_err_n push_and_pop_argument_handle(asm_data_t* asm_data_ptr, char** current_
         return asm_err_NO_ERR;
     }
 
-    if (is_mem) {
-
-        // cmd_number = (cmd_number == cmd_n_PUSH) ? cmd_n_PUSHM : cmd_n_POPM; // тут просто пуш в память
-        cmd_number = (cmd_n) (((char) cmd_number) | 0b10100000);
-    }
-    else {
-
-        if (cmd_number == cmd_n_POP) {
-
-            return asm_err_WRONG_ARG;
-        }
-        cmd_number = (cmd_n) (((char) cmd_number) | 0b00100000);
-    }
-
     PC_INCR;
     asm_data_ptr->number_of_cmnds ++;
-    write_command(asm_data_ptr, cmd_number, CMD);
+    write_command(asm_data_ptr, u_cmd_number.val, CMD);
     // $;
     // $s(*current_str_ptr);
     asm_err_n errnum = default_argument_handle(asm_data_ptr, current_str_ptr);
@@ -463,8 +460,7 @@ asm_err_n push_and_pop_argument_handle(asm_data_t* asm_data_ptr, char** current_
     SKIP_LAST_BRACKET;
     // printf("%d", errnum);
 
-    // string_pointer_shift(current_str_ptr, number_of_characters_read * is_mem);
-    // $s(*current_str_ptr);
+    $s(*current_str_ptr);
     return errnum;
 }
 //СДЕЛАТЬ КОМАНДУ POP - удаление элемента из стека
