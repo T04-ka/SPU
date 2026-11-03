@@ -77,7 +77,12 @@ JMPG : RODIPAHSAY
 ```
 After comparing, only second-to-last number will be pushed back to stack.
 
+## Some fitches
 
+* You can draw picture with only pushes, popes and conditional jumps.
+* If you don't like to think every time about subbing order, just push -1, multiple, and add.
+* One day I will add video in my assembler. But you can already do it by your own. But FPS will be limited only by your PC power.
+* In foulder <kbd>asmsrc</kbd> you can find .asm soucres of factorial, sqaure equation solve, printing an ellipse and something else.
 * Yasha is loh.
 <p align="center">
   <img width="954" height="474" alt="image" src="https://github.com/user-attachments/assets/e69305ba-582a-44a9-bdbd-27cdb2260609" />
