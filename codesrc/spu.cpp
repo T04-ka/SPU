@@ -20,7 +20,8 @@ enum cmd_err {
     cmd_t_NORMAL_EXIT   = 1,
     cmd_t_DIV_BY_ZERO   = 2,
     cmd_t_WRONG_CMD     = -1,
-    cmd_t_WRONG_PC      = 3
+    cmd_t_WRONG_PC      = 3,
+    cmd_t_WRONG_ARG     = 4,
 };
 
 //----------------------------------------------------------------------------------------------------------------
@@ -36,6 +37,7 @@ struct spu_t
     int*        reg_buf;
     stack_t     calltree;
     int*        mem_buf;
+    int*        argument;
 };
 
 #include "spu_functions.cpp"
@@ -50,21 +52,20 @@ int spu_t_ctor(spu_t* spu_t, int argc, char** argv);
 
 void spu_t_dtor(spu_t* spu_t);
 
-void cmd_opfnc_t_init();
+void command_handle(spu_t* spu_t);
 
 //----------------------------------------------------------------------------------------------------------------
 
 int main(int argc, char** argv) {
+
+    cmd_opfnc_t_init();
 
     spu_t spu_t = {};
     spu_t_ctor(&spu_t, argc, argv);
 
     while (!spu_t.onbreak) {
 
-        // $d(spu_t.pc);
-        // spu_dump(spu_t, __FILE__, __LINE__);
-        // $d(*( (char*) spu_t.cmd_buf + spu_t.pc ));
-        cmd_opfnc_t [*( (char*) (char*) spu_t.cmd_buf + spu_t.pc )] (&spu_t);
+        command_handle(&spu_t);
     }
 
     spu_err_print(spu_t);
@@ -72,6 +73,74 @@ int main(int argc, char** argv) {
     spu_t_dtor(&spu_t);
 
     return 0;
+}
+
+//----------------------------------------------------------------------------------------------------------------
+
+//TODO: Сделать через union
+void command_handle(spu_t* spu_t) {
+    char code_buf_data = *( (char*) spu_t->cmd_buf + spu_t->pc );
+
+    // $;
+    spu_t->pc ++;
+    // $d(code_buf_data);
+    char func_n = code_buf_data & 0b00011111;
+
+    switch (code_buf_data & 0b11100000) {
+
+        case 0b00100000:
+        {
+            // push
+            // $;
+            spu_t->argument = (int*) ((char*) spu_t->cmd_buf + spu_t->pc);
+            break;
+        }
+
+        case 0b01000000:
+        {
+            // pushr
+            int copied_arg = 0;
+            memcpy(&copied_arg, (char*) spu_t->cmd_buf + spu_t->pc, sizeof(int));
+            spu_t->argument = &spu_t->reg_buf[ copied_arg / SPU_EXPANENT_COEFF ];
+            break;
+        }
+
+        case 0b10100000:
+        {
+            // pushm
+            int copied_arg = 0;
+            memcpy(&copied_arg, (char*) spu_t->cmd_buf + spu_t->pc, sizeof(int));
+            spu_t->argument = &spu_t->mem_buf[ copied_arg / SPU_EXPANENT_COEFF ];
+            break;
+        }
+
+        case 0b11000000:
+        {
+            // pushmr
+            int copied_arg = 0;
+            memcpy(&copied_arg, (char*) spu_t->cmd_buf + spu_t->pc, sizeof(int));
+            int register_value = spu_t->reg_buf[ copied_arg / SPU_EXPANENT_COEFF ] / SPU_EXPANENT_COEFF;
+            spu_t->argument = &spu_t->mem_buf[register_value];
+            break;
+        }
+
+        default:
+        {
+            spu_t->argument = NULL;
+        }
+    }
+
+    // $d(func_n);
+    // $d(spu_t->pc);
+    cmd_opfnc_t [func_n] (spu_t);
+    // $d(func_n);
+    // $;
+    // $d(func_n);
+    // $d(code_buf_data & cmd_flags.mem);
+    // $d(code_buf_data & cmd_flags.cnst);
+    // $d(code_buf_data & cmd_flags.reg);
+    // spu_dump(spu_t, __FILE__, __LINE__);
+    // $d(*( (char*) spu_t.cmd_buf + spu_t.pc ));
 }
 
 //----------------------------------------------------------------------------------------------------------------

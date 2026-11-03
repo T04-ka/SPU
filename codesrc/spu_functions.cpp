@@ -12,14 +12,16 @@ int spu_push(spu_t* spu_t);
 
 int spu_push(spu_t* spu_t) {
 
-    PC_INCR;
-    // сделать через memcpy
-    // $du(( *(unsigned int*)((char*) spu_t->cmd_buf + spu_t->pc) ));
+    if (spu_t->argument == NULL) {
 
-    int copied_arg = MEMCPY_ARG;
+        spu_t->onbreak = cmd_t_WRONG_ARG;
+        return 1;
+    }
+    int argument = 0;
+    // $d(*spu_t->argument);
+    memcpy(&argument, spu_t->argument, sizeof(int));
 
-    int var = copied_arg;
-    STACK_PUSH(&spu_t->stk, var);
+    STACK_PUSH(&spu_t->stk, argument);
 
     spu_t->pc += ARGSZ;
 
@@ -32,7 +34,7 @@ int spu_add(spu_t* spu_t);
 
 int spu_add(spu_t* spu_t) {
 
-    PC_INCR;
+
 
     int var1 = 0, var2 = 0;
     STACK_POP(&spu_t->stk, &var1);
@@ -48,7 +50,7 @@ int spu_sub(spu_t* spu_t);
 
 int spu_sub(spu_t* spu_t) {
 
-    PC_INCR;
+
 
     int var1 = 0, var2 = 0;
     STACK_POP(&spu_t->stk, &var1);
@@ -64,7 +66,7 @@ int spu_out(spu_t* spu_t);
 
 int spu_out(spu_t* spu_t) {
 
-    PC_INCR;
+
 
     int var = 0;
     STACK_POP(&spu_t->stk, &var);
@@ -79,7 +81,7 @@ int spu_mul(spu_t* spu_t);
 
 int spu_mul(spu_t* spu_t) {
 
-    PC_INCR;
+
 
     int var1 = 0, var2 = 0;
     STACK_POP(&spu_t->stk, &var1);
@@ -95,7 +97,7 @@ int spu_div(spu_t* spu_t);
 
 int spu_div(spu_t* spu_t) {
 
-    PC_INCR;
+
 
     int var1 = 0, var2 = 0;
     STACK_POP(&spu_t->stk, &var1);
@@ -119,7 +121,7 @@ int spu_halt(spu_t* spu_t);
 
 int spu_halt(spu_t* spu_t) {
 
-    PC_INCR;
+
     spu_t->onbreak = cmd_t_NORMAL_EXIT;
 
     return 0;
@@ -131,7 +133,7 @@ int spu_jump(spu_t* spu_t);
 
 int spu_jump(spu_t* spu_t) {
 
-    PC_INCR;
+
 
     int copied_arg = MEMCPY_ARG;
 
@@ -143,7 +145,6 @@ int spu_jump(spu_t* spu_t) {
 //----------------------------------------------------------------------------------------------------------------
 
 #define JUMP_IF(CMP)                                                    \
-PC_INCR;                                                                \
 int frst_chr = 0, scnd_chr = 0;                                         \
                                                                         \
 STACK_POP(&spu_t->stk, &scnd_chr);                                      \
@@ -237,8 +238,6 @@ int spu_call(spu_t* spu_t);
 
 int spu_call(spu_t* spu_t) {
 
-    PC_INCR;
-
     STACK_PUSH(&spu_t->calltree, spu_t->pc + ARGSZ);
 
     int copied_arg = MEMCPY_ARG;
@@ -261,125 +260,16 @@ int spu_ret(spu_t* spu_t) {
 
 //----------------------------------------------------------------------------------------------------------------
 
-int spu_pushr(spu_t* spu_t);
-
-int spu_pushr(spu_t* spu_t) {
-
-    PC_INCR;
-    // $d(GET_ARG(spu_t->pc));
-    int copied_arg = MEMCPY_ARG;
-
-    STACK_PUSH(&spu_t->stk, spu_t->reg_buf[copied_arg / SPU_EXPANENT_COEFF]);
-
-    spu_t->pc += ARGSZ;
-
-    return 0;
-}
-
-//----------------------------------------------------------------------------------------------------------------
-
-int spu_popr(spu_t* spu_t);
-
-int spu_popr(spu_t* spu_t) {
-
-    PC_INCR;
-    // $d(GET_ARG(spu_t->pc));
-    int copied_arg = MEMCPY_ARG;
-
-    STACK_POP(&spu_t->stk, &spu_t->reg_buf[copied_arg / SPU_EXPANENT_COEFF]);
-
-    spu_t->pc += ARGSZ;
-
-    return 0;
-}
-
-//----------------------------------------------------------------------------------------------------------------
-
-int spu_pushm(spu_t* spu_t);
-
-int spu_pushm(spu_t* spu_t) {
-
-    PC_INCR;
-
-    int copied_arg = MEMCPY_ARG;
-
-    STACK_PUSH(&spu_t->stk, spu_t->mem_buf[copied_arg / SPU_EXPANENT_COEFF]);
-
-    spu_t->pc += ARGSZ;
-
-    return 0;
-}
-
-//----------------------------------------------------------------------------------------------------------------
-
-int spu_popm(spu_t* spu_t);
-
-int spu_popm(spu_t* spu_t) {
-
-    PC_INCR;
-
-    int copied_arg = MEMCPY_ARG;
-
-    STACK_POP(&spu_t->stk, &spu_t->mem_buf[copied_arg / SPU_EXPANENT_COEFF]);
-
-    spu_t->pc += ARGSZ;
-
-    return 0;
-}
-
-//----------------------------------------------------------------------------------------------------------------
-
 int spu_pop(spu_t* spu_t);
 
 int spu_pop(spu_t* spu_t) {
 
-    PC_INCR;
+    if (spu_t->argument == NULL) {
 
-    int copied_arg = MEMCPY_ARG;
-
-    int useless_var_for_pop = 0;
-    for (int i = 0; i < copied_arg / SPU_EXPANENT_COEFF; i++) {
-
-        STACK_POP(&spu_t->stk, &useless_var_for_pop);
+        spu_t->onbreak = cmd_t_WRONG_ARG;
+        return 1;
     }
-
-    spu_t->pc += ARGSZ;
-
-    return 0;
-}
-
-//----------------------------------------------------------------------------------------------------------------
-
-int spu_pushmr(spu_t* spu_t);
-
-int spu_pushmr(spu_t* spu_t) {
-
-    PC_INCR;
-
-    int copied_arg = MEMCPY_ARG;
-
-    int register_value = spu_t->reg_buf[copied_arg / SPU_EXPANENT_COEFF] / SPU_EXPANENT_COEFF;
-
-    STACK_PUSH(&spu_t->stk, spu_t->mem_buf[register_value]);
-
-    spu_t->pc += ARGSZ;
-
-    return 0;
-}
-
-//----------------------------------------------------------------------------------------------------------------
-
-int spu_popmr(spu_t* spu_t);
-
-int spu_popmr(spu_t* spu_t) {
-
-    PC_INCR;
-
-    int copied_arg = MEMCPY_ARG;
-
-    int register_value = spu_t->reg_buf[copied_arg / SPU_EXPANENT_COEFF] / SPU_EXPANENT_COEFF;
-
-    STACK_POP(&spu_t->stk, &spu_t->mem_buf[register_value]);
+    STACK_POP(&spu_t->stk, spu_t->argument);
 
     spu_t->pc += ARGSZ;
 
@@ -392,7 +282,7 @@ int spu_in(spu_t* spu_t);
 
 int spu_in(spu_t* spu_t) {
 
-    PC_INCR;
+
 
     double in_value = NAN;
     scanf("%lg[^\n]", &in_value);
@@ -408,7 +298,7 @@ int spu_sqrt(spu_t* spu_t);
 
 int spu_sqrt(spu_t* spu_t) {
 
-    PC_INCR;
+
 
     int value = 0;
     STACK_POP(&spu_t->stk, &value);
@@ -427,7 +317,7 @@ int spu_draw(spu_t* spu_t);
 
 int spu_draw(spu_t* spu_t) {
 
-    PC_INCR;
+
 
     int window_width = spu_t->reg_buf[RDW] / SPU_EXPANENT_COEFF;
     int memory_first_index = spu_t->reg_buf[RMFI] / SPU_EXPANENT_COEFF;
@@ -463,34 +353,32 @@ typedef int spu_opfnc_t(spu_t* spu_t);
 
 //----------------------------------------------------------------------------------------------------------------
 
-spu_opfnc_t* cmd_opfnc_t [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT - 2] =
-    {
-        spu_halt,
-        spu_push,
-        spu_add,
-        spu_sub,
-        spu_div,
-        spu_mul,
-        spu_out,
-        spu_jump,
-        spu_jump_if_bggr,
-        spu_jump_if_smllr,
-        spu_jump_if_eq,
-        spu_jump_if_nbggr,
-        spu_jump_if_nsmllr,
-        spu_jump_if_neq,
-        spu_call,
-        spu_ret,
-        spu_pushr,
-        spu_popr,
-        spu_pushm,
-        spu_popm,
-        spu_pop,
-        spu_pushmr,
-        spu_popmr,
-        spu_in,
-        spu_sqrt,
-        spu_draw,
-    };
+void cmd_opfnc_t_init();
+
+spu_opfnc_t* cmd_opfnc_t [CMD_N__TOUCH_ONLY_ON_ADDING_NEW_COMMANDS_AND_NO_EXCEPT_BLYAT - 2] = {};
+
+void cmd_opfnc_t_init() {
+
+    cmd_opfnc_t[0] = spu_halt;
+    cmd_opfnc_t[1] = spu_push;
+    cmd_opfnc_t[2] = spu_add;
+    cmd_opfnc_t[3] = spu_sub;
+    cmd_opfnc_t[4] = spu_div;
+    cmd_opfnc_t[5] = spu_mul;
+    cmd_opfnc_t[6] = spu_out;
+    cmd_opfnc_t[7] = spu_jump;
+    cmd_opfnc_t[8] = spu_jump_if_bggr;
+    cmd_opfnc_t[9] = spu_jump_if_smllr;
+    cmd_opfnc_t[10] = spu_jump_if_eq;
+    cmd_opfnc_t[11] = spu_jump_if_neq;
+    cmd_opfnc_t[12] = spu_jump_if_nsmllr;
+    cmd_opfnc_t[13] = spu_jump_if_neq;
+    cmd_opfnc_t[14] = spu_call;
+    cmd_opfnc_t[15] = spu_ret;
+    cmd_opfnc_t[20] = spu_pop;
+    cmd_opfnc_t[23] = spu_in;
+    cmd_opfnc_t[24] = spu_sqrt;
+    cmd_opfnc_t[25] = spu_draw;
+}
 
 //----------------------------------------------------------------------------------------------------------------

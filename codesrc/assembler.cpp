@@ -408,15 +408,20 @@ asm_err_n push_and_pop_argument_handle(asm_data_t* asm_data_ptr, char** current_
 
         regn = reg_arg_handle(current_str_ptr);
     }
+
     if (regn != -1) {
 
         if (is_mem) {
 
-            cmd_number = (cmd_number == cmd_n_PUSH) ? cmd_n_PUSHMR : cmd_n_POPMR;
+            // cmd_number = (cmd_number == cmd_n_PUSH) ? cmd_n_PUSHMR : cmd_n_POPMR; // тут пуш/поп регистр память
+            cmd_number = (cmd_n) (((char) cmd_number) | 0b11000000);
         }
         else {
 
-            cmd_number = (cmd_number == cmd_n_PUSH) ? cmd_n_PUSHR : cmd_n_POPR;
+            // cmd_number = (cmd_number == cmd_n_PUSH) ? cmd_n_PUSHR : cmd_n_POPR; // тут пуш поп регистра
+            $std("%b\n", cmd_number);
+            cmd_number = (cmd_n) (((char) cmd_number) | 0b01000000);
+            $std("%b\n", cmd_number);
         }
 
         string_pointer_shift(current_str_ptr, strlen(REGISTER_LIST[regn]));
@@ -435,7 +440,16 @@ asm_err_n push_and_pop_argument_handle(asm_data_t* asm_data_ptr, char** current_
 
     if (is_mem) {
 
-        cmd_number = (cmd_number == cmd_n_PUSH) ? cmd_n_PUSHM : cmd_n_POPM;
+        // cmd_number = (cmd_number == cmd_n_PUSH) ? cmd_n_PUSHM : cmd_n_POPM; // тут просто пуш в память
+        cmd_number = (cmd_n) (((char) cmd_number) | 0b10100000);
+    }
+    else {
+
+        if (cmd_number == cmd_n_POP) {
+
+            return asm_err_WRONG_ARG;
+        }
+        cmd_number = (cmd_n) (((char) cmd_number) | 0b00100000);
     }
 
     PC_INCR;
@@ -576,7 +590,7 @@ int read_one_command(char** current_str_ptr) {
 }
 
 //----------------------------------------------------------------------------------------------------------------
-
+// TODO: сделать принт комманды из считываемой строки
 int write_command(asm_data_t* asm_data_ptr, int arg, bool is_command) {
 
     if (!asm_data_ptr->on_write) {
@@ -588,8 +602,8 @@ int write_command(asm_data_t* asm_data_ptr, int arg, bool is_command) {
 
         char arr_to_write[1] = {(char) arg};
         fwrite(arr_to_write, sizeof(char), 1, asm_data_ptr->bin_fl);
-
-        fprintf(asm_data_ptr->asm_lst_fl, "%16s| %8d | %#16.8x | %#16.8x | %8s |\n", "", arg, (unsigned) arg, (unsigned) asm_data_ptr->pc - 1, CMD_L[arg].name);
+        // TODO: сделать вывод имени команды
+        fprintf(asm_data_ptr->asm_lst_fl, "%16s| %8d | %#16.8x | %#16.8x | %8s |\n", "", arg, (unsigned) arg, (unsigned) asm_data_ptr->pc - 1, "HUI");
 
 
         return 0;
